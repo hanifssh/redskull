@@ -1,4 +1,4 @@
-# ☠️ Red Skull Bot
+#  RedSkull Whatsapp Bot
 
 ![Redskull Logo](assets/logo.jpeg)
 
