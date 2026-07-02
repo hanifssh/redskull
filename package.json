@@ -1,0 +1,33 @@
+{
+  "name": "redskull",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@tcgdex/sdk": "^2.9.0",
+    "axios": "^1.18.1",
+    "canvas": "^3.2.3",
+    "cheerio": "^1.2.0",
+    "form-data": "^4.0.6",
+    "googlethis": "^1.8.0",
+    "link-preview-js": "^3.2.0",
+    "node-fetch": "^3.3.2",
+    "node.fetch": "^1.0.0",
+    "novaxmd-baileys-v2": "^1.0.12",
+    "playwright": "^1.61.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "qrcode-terminal": "^0.12.0",
+    "sharp": "^0.35.2",
+    "wa-sticker-formatter": "^4.4.4",
+    "yt-search": "^2.13.1",
+    "ytdl-core": "^4.11.5"
+  }
+}
