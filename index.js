@@ -25,7 +25,14 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const pino = require('pino');
-const userConfig = require('./config');
+
+let userConfig;
+try {
+    userConfig = require('./config');
+} catch {
+    console.log('⚠️ config.js not found — using defaults.');
+    userConfig = {};
+}
 
 const SESSION_DIR = './sessions';
 const PLUGINS_DIR = './plugins';
