@@ -1,3 +1,20 @@
+/**
+ * ╔══════════════════════════════════════════════════════════╗
+ * ║  TEMP CLEANER — Background Maintenance Script            ║
+ * ╚══════════════════════════════════════════════════════════╝
+ *
+ * This is NOT a user command.
+ * It runs silently in the background and automatically
+ * deletes old files inside the "temp/" folder every 10 minutes.
+ *
+ * If you remove this file, your temp folder may grow
+ * indefinitely and fill up your disk space.
+ *
+ * Do not delete or rename this file.
+ *
+ * — Redskull Developer (Hanif)
+ */
+
 const fs = require('fs');
 const path = require('path');
 

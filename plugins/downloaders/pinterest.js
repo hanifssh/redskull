@@ -1,7 +1,6 @@
 const google = require('googlethis');
 const axios = require('axios');
 
-// Strict check for Pinterest images
 function isPinterestUrl(url) {
     return /pinimg\.com|pinterest\.com/i.test(url);
 }
@@ -28,7 +27,6 @@ module.exports = {
             });
         }
 
-        // Force Google to return only Pinterest results
         const searchQuery = `${query} site:pinterest.com`;
 
         await sock.sendMessage(from, { text: `📌 Searching Pinterest for *${query}*…` });
@@ -45,7 +43,6 @@ module.exports = {
                 return sock.sendMessage(from, { text: '❌ No images found.' });
             }
 
-            // Use original (high-res) URLs and filter strictly for Pinterest
             const imageUrls = response
             .map(item => item.origin)          // original full‑size image
             .filter(url => isPinterestUrl(url))
@@ -55,7 +52,6 @@ module.exports = {
                 return sock.sendMessage(from, { text: '❌ No Pinterest images found for that query.' });
             }
 
-            // Download and send each image
             let sent = 0;
             for (const imageUrl of imageUrls) {
                 if (sent >= count) break;

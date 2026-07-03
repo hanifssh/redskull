@@ -1,3 +1,24 @@
+/**
+ * ╔══════════════════════════════════════════════════════════╗
+ * ║  REDSKULL BOT — MAIN ENTRY POINT (DO NOT EDIT)          ║
+ * ╚══════════════════════════════════════════════════════════╝
+ *
+ * This is the core brain of your WhatsApp bot.
+ * Unless you fully understand Node.js, Baileys, and the
+ * internal plugin system, please do NOT modify anything
+ * inside this file. Changing something incorrectly can
+ * break the entire bot.
+ *
+ * If you want to customise your bot:
+ *   • Edit the "config.js" file for settings.
+ *   • Add or remove commands inside the "plugins/" folder.
+ *   • Do not touch this file unless you know what you're doing.
+ *
+ * If you break it by editing here, clone it from github again
+ *
+ * — Redskull Developer (Hanif)
+ */
+
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require('@whiskeysockets/baileys');
 const QRCode = require('qrcode-terminal');
 const fs = require('fs');
