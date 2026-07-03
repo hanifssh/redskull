@@ -38,7 +38,7 @@ module.exports = {
             });
         }
 
-        await sock.sendMessage(from, { text: '⏳ Updating from GitHub…' });
+        await sock.sendMessage(from, { text: '⏳ Updating RedSkull…' });
 
         try {
             execSync('git pull origin main', {
