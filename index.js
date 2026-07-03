@@ -4,22 +4,23 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const pino = require('pino');
+const userConfig = require('./config');
 
 const SESSION_DIR = './sessions';
 const PLUGINS_DIR = './plugins';
 const LOGO_PATH   = './assets/logo.jpeg';
 const VARS_PATH   = './database/vars.json';
 
-const BOT_NAME = 'RedSkull';
-const VERSION  = '5.5.5';
+const BOT_NAME = userConfig.BOT_NAME || 'RedSkull';
+const VERSION  = userConfig.VERSION  || '5.5.5';
 
 const isPairingMode = process.argv.includes('--pair');
 
 const state = {
-    prefix: '.',
-    mode: 'public',
-    owners: [],
-    sudos: [],
+    prefix: userConfig.PREFIX || '.',
+    mode:   userConfig.MODE   || 'public',
+    owners: (userConfig.OWNERS || []).map(n => n.toString().replace(/\D/g, '') + '@s.whatsapp.net'),
+    sudos:  (userConfig.SUDOS  || []).map(n => n.toString().replace(/\D/g, '') + '@s.whatsapp.net'),
 };
 
 function decodeJid(jid) {
@@ -65,27 +66,58 @@ function getSenderJid(msg) {
     return msg.key.participant || msg.key.remoteJid || '';
 }
 
+const getCleanDigits = (jid) => {
+    if (!jid || typeof jid !== 'string') return '';
+    return jid.split(':')[0].split('@')[0].replace(/\D/g, '');
+};
+
 function checkOwner(jid) {
     if (!jid) return false;
-    const baseJid = decodeJid(jid).split(':')[0];
-    return state.owners.some(owner => decodeJid(owner).split(':')[0] === baseJid);
+
+    const incomingDigits = getCleanDigits(jid);
+    if (!incomingDigits) return false;
+
+    const ownerList = state.owners || [];
+
+    const botDigits = sock?.user?.id ? getCleanDigits(sock.user.id) : '';
+    if (incomingDigits === botDigits) return true;
+
+    return ownerList.some(owner => getCleanDigits(owner) === incomingDigits);
 }
 
 function checkSudo(jid) {
     if (!jid) return false;
     if (checkOwner(jid)) return true;
-    const baseJid = decodeJid(jid).split(':')[0];
-    return state.sudos.some(sudo => decodeJid(sudo).split(':')[0] === baseJid);
+
+    const incomingDigits = getCleanDigits(jid);
+    if (!incomingDigits) return false;
+
+    const sudoList = state.sudos || [];
+
+    return sudoList.some(sudo => getCleanDigits(sudo) === incomingDigits);
 }
 
 function reloadVars() {
     const raw = readVars();
 
-    state.owners = raw.OWNERS ? (Array.isArray(raw.OWNERS) ? raw.OWNERS : raw.OWNERS.split(',').map(s => s.trim()).filter(Boolean)) : [];
-    state.sudos = raw.SUDOS ? (Array.isArray(raw.SUDOS) ? raw.SUDOS : raw.SUDOS.split(',').map(s => s.trim()).filter(Boolean)) : [];
+    const activeConfig = typeof userConfig !== 'undefined' ? userConfig : (typeof config !== 'undefined' ? config : {});
 
-    state.owners = [...new Set(state.owners.map(decodeJid))];
-    state.sudos = [...new Set([...state.owners, ...state.sudos.map(decodeJid)])];
+    if (activeConfig.OWNERS && activeConfig.OWNERS.length > 0) {
+        state.owners = [...new Set(activeConfig.OWNERS.map(n => String(n).replace(/\D/g, '') + '@s.whatsapp.net'))];
+    } else if (activeConfig.OWNER_NUMBER) {
+        state.owners = [String(activeConfig.OWNER_NUMBER).replace(/\D/g, '') + '@s.whatsapp.net'];
+    } else {
+        state.owners = raw.OWNERS ? (Array.isArray(raw.OWNERS) ? raw.OWNERS : raw.OWNERS.split(',').map(s => s.trim()).filter(Boolean)) : [];
+        state.owners = [...new Set(state.owners.map(decodeJid))];
+    }
+
+    if (activeConfig.SUDOS && activeConfig.SUDOS.length > 0) {
+        state.sudos = [...new Set(activeConfig.SUDOS.map(n => String(n).replace(/\D/g, '') + '@s.whatsapp.net'))];
+    } else {
+        state.sudos = raw.SUDOS ? (Array.isArray(raw.SUDOS) ? raw.SUDOS : raw.SUDOS.split(',').map(s => s.trim()).filter(Boolean)) : [];
+        state.sudos = [...new Set([...state.owners, ...state.sudos.map(decodeJid)])];
+    }
+
 
     if (raw.PREFIX) state.prefix = raw.PREFIX;
     if (raw.MODE) state.mode = raw.MODE;
@@ -121,6 +153,9 @@ async function getSenderName(sock, msg) {
 
 const commands = new Map();
 const categories = {};
+
+global.commands = commands;
+global.categories = categories;
 
 function registerCommand(def) {
     const names = [def.name, ...(def.aliases || [])];
@@ -271,15 +306,59 @@ registerCommand({
     description: 'Show bot owner information',
     category: 'Bot',
     execute: async (sock, from, msg) => {
-        const raw = readVars();
-        const ownerList = raw.OWNERS || [];
-        let text = `╭━─━─━─≪✠≫─━─━─━╮\n*👑 BOT OWNER*\n╰━─━─━─≪✠≫─━─━─━╯\n\n`;
-        if (ownerList.length === 0) text += `│ Bot number is the owner\n`;
-        else ownerList.forEach((num, i) => { text += `│ ✗ ${i + 1}. ${num.split('@')[0]}\n`; });
-        text += `\n╰━─━─━─≪✠≫─━─━─━╯`;
-        await sock.sendMessage(from, { text });
+        const toNumericString = (str) => {
+            if (!str) return '';
+            return String(str).replace(/\D/g, '');
+        };
+
+        const ownerList = state.owners || [];
+        const botDigits = sock.user?.id ? toNumericString(sock.user.id.split(':')[0]) : '';
+
+        let text = `╭━━━────────────━━━╮\n`;
+        text += `👑  *REDSKULL OWNER*  👑\n`;
+        text += `╰━━━────────────━━━╯\n\n`;
+
+        if (ownerList.length === 0) {
+            if (!botDigits) {
+                text += `❌ _No active owner declared._\n`;
+            } else {
+                text += `👤 *Primary Account:* @${botDigits}\n`;
+                text += `📱 *Contact Phone:* +${botDigits}\n\n`;
+            }
+
+            text += `━━━━━━━━━━━━━━━━━━━━━\n`;
+            text += `✨ Powered By RedSkull`;
+
+            await sock.sendMessage(from, {
+                text,
+                mentions: botDigits ? [`${botDigits}@s.whatsapp.net`] : []
+            });
+            return;
+        }
+
+        let mentionsArray = [];
+        ownerList.forEach((ownerJid, i) => {
+            const cleanNumber = toNumericString(ownerJid);
+            if (!cleanNumber) return;
+
+            const badge = i === 0 ? '🏆 *Owner:*' : '🛡️ *Co-Owner:*';
+
+            text += `${badge} @${cleanNumber}\n`;
+            text += `🔹 *Contact ID:* +${cleanNumber}\n\n`;
+
+            mentionsArray.push(`${cleanNumber}@s.whatsapp.net`);
+        });
+
+        text += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `✨ Powered By RedSkull`;
+
+        await sock.sendMessage(from, {
+            text,
+            mentions: mentionsArray
+        });
     }
 });
+
 
 registerCommand({
     name: 'sudo',
@@ -291,12 +370,38 @@ registerCommand({
         let rawText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
         const typedCmd = rawText.slice(state.prefix.length).trim().split(/\s+/)[0].toLowerCase();
 
+        const resolveToPhoneNumber = async (jidString) => {
+            if (!jidString) return null;
+
+            let targetJid = jidString.split(':')[0].trim();
+            if (!targetJid.includes('@')) targetJid += '@s.whatsapp.net';
+
+            if (targetJid.endsWith('@lid')) {
+                try {
+                    const mappedPn = await sock.signalRepository?.lidMapping?.getPNForLID(targetJid);
+                    if (mappedPn) return mappedPn.split(':')[0].split('@')[0].replace(/\D/g, '');
+                } catch (_) {}
+            }
+
+            return targetJid.split('@')[0].replace(/\D/g, '');
+        };
+
+        const toDisplay = (numString) => numString.split(':')[0].replace(/\D/g, '');
+
+
         if (typedCmd === 'listsudo' || typedCmd === 'sudo') {
             const raw = readVars();
             const sudoList = raw.SUDOS || [];
             let text = `╭━─━─━─≪✠≫─━─━─━╮\n*👑 SUDO USERS*\n╰━─━─━─≪✠≫─━─━─━╯\n\n`;
-            if (sudoList.length === 0) text += `📭 No sudo users added yet.\n`;
-            else sudoList.forEach((num, i) => { text += `│ ✗ ${i + 1}. ${num}\n`; });
+
+            if (sudoList.length === 0) {
+                text += `📭 No sudo users added yet.\n`;
+            } else {
+                const uniqueSudos = [...new Set(sudoList.map(s => toDisplay(s)))];
+                uniqueSudos.forEach((phoneNum, i) => {
+                    text += `│ ✗ ${i + 1}. ${phoneNum}\n`;
+                });
+            }
             text += `\n╰━─━─━─≪✠≫─━─━─━╯`;
             await sock.sendMessage(from, { text });
             return;
@@ -306,40 +411,34 @@ registerCommand({
             let target = args[0] || null;
             const qi = msg.message?.extendedTextMessage?.contextInfo;
 
-            if (!target && qi?.participant) {
-                target = qi.participant;
-            }
-
-            if (!target && qi?.mentionedJid?.[0]) {
-                target = qi.mentionedJid[0];
-            }
+            if (!target && qi?.participant) target = qi.participant;
+            if (!target && qi?.mentionedJid?.[0]) target = qi.mentionedJid[0];
 
             if (!target) {
                 await sock.sendMessage(from, { text: `❌ Usage: \`${state.prefix}setsudo <mention/reply>\`` });
                 return;
             }
 
-            let targetJid = decodeJid(target.includes('@') ? target.trim() : target.replace(/[^0-9]/g, '') + '@s.whatsapp.net');
+            let targetJid = target.includes('@') ? target.trim() : target.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
 
-            if (!targetJid.endsWith('@lid')) {
-                try {
-                    const contactInfo = await sock.getContact?.(targetJid);
-                    if (contactInfo && contactInfo.lid) {
-                        console.log(`🎯 Map Resolution Success: Swapped standard phone format for LID: ${contactInfo.lid}`);
-                        targetJid = decodeJid(contactInfo.lid);
-                    }
-                } catch (_) {  }
+            const resolvedPhone = await resolveToPhoneNumber(targetJid);
+            if (!resolvedPhone) {
+                await sock.sendMessage(from, { text: `❌ Could not resolve identity format.` });
+                return;
             }
+
+            const dbSaveValue = `${resolvedPhone}@s.whatsapp.net`;
 
             const raw = readVars();
             let sudoArray = raw.SUDOS || [];
-            if (!sudoArray.includes(targetJid)) {
-                sudoArray.push(targetJid);
+
+            if (!sudoArray.includes(dbSaveValue)) {
+                sudoArray.push(dbSaveValue);
                 setVar('SUDOS', sudoArray);
                 reloadVars();
             }
 
-            await sock.sendMessage(from, { text: `✅ *Sudo Added Successfully!*\n\nSaved Identity: \`${targetJid}\`` });
+            await sock.sendMessage(from, { text: `✅ *Sudo Added Successfully!*\n\nSaved Identity: \`+${resolvedPhone}\`` });
             return;
         }
 
@@ -351,13 +450,15 @@ registerCommand({
 
             if (!target) return;
 
-            const cleanTarget = target.split('@')[0];
+            const resolvedPhone = await resolveToPhoneNumber(target);
+            if (!resolvedPhone) return;
+
             const raw = readVars();
             let sudoArray = raw.SUDOS || [];
 
             sudoArray = sudoArray.filter(s => {
-                const cleanSudoItem = s.split('@')[0];
-                return cleanSudoItem !== cleanTarget;
+                const currentSudoPhone = s.split('@')[0].replace(/\D/g, '');
+                return currentSudoPhone !== resolvedPhone;
             });
 
             setVar('SUDOS', sudoArray);
@@ -373,6 +474,7 @@ if (categories['Bot']) {
         if (!categories['Bot'].includes(a)) categories['Bot'].push(a);
     });
 }
+
 
 let qrDisplayed = false;
 
@@ -433,10 +535,39 @@ async function startBot() {
                 const from = msg.key.remoteJid;
                 if (!from) continue;
 
-                const senderJid = decodeJid(getSenderJid(msg));
+                let rawSenderJid = decodeJid(getSenderJid(msg)).split(':')[0].trim();
+                if (!rawSenderJid.includes('@')) rawSenderJid += '@s.whatsapp.net';
+
+                let senderJid = rawSenderJid;
+
+                if (senderJid.endsWith('@lid')) {
+                    try {
+                        const mappedPn = await sock.signalRepository?.lidMapping?.getPNForLID(senderJid);
+                        if (mappedPn) {
+                            senderJid = decodeJid(mappedPn.split(':')[0]);
+                        } else {
+                            const contact = await sock.getContact?.(senderJid);
+                            if (contact?.pn) {
+                                const cleanPn = contact.pn.split(':')[0];
+                                senderJid = decodeJid(cleanPn.includes('@') ? cleanPn : `${cleanPn}@s.whatsapp.net`);
+                            }
+                        }
+                    } catch (_) {
+                        const digits = senderJid.split('@')[0].split(':')[0].replace(/\D/g, '');
+                        senderJid = `${digits}@s.whatsapp.net`;
+                    }
+                }
+
+                const getDigits = (str) => str.replace(/\D/g, '');
+                const checkSudoFallback = (jid) => {
+                    const incomingDigits = getDigits(jid);
+                    const rawVars = readVars();
+                    const sudoList = rawVars.SUDOS || [];
+                    return sudoList.some(s => getDigits(s) === incomingDigits);
+                };
 
                 const senderIsOwner = msg.key.fromMe || checkOwner(senderJid);
-                const senderIsSudo  = msg.key.fromMe || checkSudo(senderJid);
+                const senderIsSudo  = msg.key.fromMe || checkSudo(senderJid) || checkSudoFallback(senderJid);
 
                 let text = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || '';
 
@@ -473,7 +604,9 @@ async function startBot() {
             }
         }
     });
-}
+
+    }
+
 
 startBot();
 

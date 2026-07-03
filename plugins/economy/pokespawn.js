@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const POKE_SPAWN_PATH = path.join(__dirname, '../../database/pokespawner.json');
+//replace this API key with your own to avoid errors, you can get it completely free from https://dev.pokemontcg.io/
 const POKEMON_API_KEY = '1d2fd177-b0fe-415b-8739-e3df4ff6ea63';
 const BASE_URL = 'https://api.pokemontcg.io/v2/cards';
 

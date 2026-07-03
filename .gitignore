@@ -2,3 +2,4 @@ sessions/
 database/
 node_modules/
 temp/
+config.js
