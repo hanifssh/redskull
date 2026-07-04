@@ -508,33 +508,8 @@ let qrDisplayed = false;
 
 async function startBot() {
     console.log('\n╭━─━─━─≪✠≫─━─━─━╮\n    ' + BOT_NAME + ' 🤖\n╰━─━─━─≪✠≫─━─━─━╯\n');
-
-    if (!isPairingMode) {
-        const readline = require('readline').createInterface({
-            input: process.stdin,
-            output: process.stdout
-        });
-        console.log('\n🔐 Choose connection method:');
-        console.log('1. Pair with Phone Number');
-        console.log('2. QR Code');
-        const answer = await new Promise(resolve => {
-            readline.question('Enter 1 or 2: ', resolve);
-        });
-        readline.close();
-
-        if (answer.trim() === '1') {
-            isPairingMode = true;
-            console.log('\n✅ Phone number pairing selected.');
-            const phone = await new Promise(resolve => {
-                const rl2 = require('readline').createInterface({ input: process.stdin, output: process.stdout });
-                rl2.question('Enter phone number (with country code, e.g., 923001234567): ', resolve);
-                rl2.close();
-            });
-            process.argv.push('--phone=' + phone.trim());
-        } else {
-            console.log('\n📱 QR Code pairing selected.');
-        }
-    }
+    initVars();
+    loadPlugins();
 
     if (!fs.existsSync(SESSION_DIR)) fs.mkdirSync(SESSION_DIR, { recursive: true });
     const { state: authState, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
