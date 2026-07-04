@@ -54,7 +54,8 @@ async function processDownload(chatJid, pending, wantVideo) {
                 '-f', 'best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]',
                 '--no-warnings',
                 '--restrict-filenames',
-                '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
+                '--extractor-args', 'youtube:player_client=android',
                 '-o', outputTemplate,
             ];
             await execFileAsync('yt-dlp', videoArgs, { timeout: 120000 });
@@ -80,7 +81,8 @@ async function processDownload(chatJid, pending, wantVideo) {
                 '--add-metadata',
                 '--no-warnings',
                 '--restrict-filenames',
-                '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
+                '--extractor-args', 'youtube:player_client=android',
                 '-o', outputTemplate,
             ];
             await execFileAsync('yt-dlp', audioArgs, { timeout: 120000 });
@@ -162,7 +164,8 @@ module.exports = {
                 '--print', '%(thumbnail)s',
                 '--skip-download',
                 '--no-warnings',
-                '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
+                '--extractor-args', 'youtube:player_client=android',
             ];
 
             const { stdout } = await execFileAsync('yt-dlp', infoArgs, { timeout: 30000 });

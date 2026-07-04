@@ -2,107 +2,63 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-function clearRequireCache(dir) {
-    if (!fs.existsSync(dir)) return;
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-            clearRequireCache(fullPath);
-        } else if (entry.name.endsWith('.js') && !entry.name.startsWith('_')) {
-            try {
-                delete require.cache[require.resolve(fullPath)];
-            } catch {}
-        }
-    }
-}
+const REPO_URL = 'https://github.com/hanifssh/redskull.git';
+const BRANCH = 'main';
 
 module.exports = {
     name: 'update',
     aliases: [],
     category: 'Bot',
-    desc: 'Pull latest code from GitHub, install new dependencies, and hot‑reload plugins (owner/sudo only)',
+    desc: 'Pull latest code from GitHub and restart the bot (owner/sudo only)',
 
     execute: async (sock, from, msg, args, perms) => {
         if (!perms.isOwner && !perms.isSudo) {
             return sock.sendMessage(from, { text: '❌ Only the bot owner or sudo users can update.' });
         }
 
-        if (!global.commands || !global.categories) {
-            return sock.sendMessage(from, {
-                text: '❌ Bot update system not fully configured.\n' +
-                'Add these two lines in index.js after declaring commands and categories:\n' +
-                '`global.commands = commands;`\n' +
-                '`global.categories = categories;`\n' +
-                'Then restart the bot.'
-            });
-        }
-
-        await sock.sendMessage(from, { text: '⏳ Updating RedSkull…' });
+        await sock.sendMessage(from, { text: '⏳ Updating from GitHub…' });
 
         try {
-            execSync('git pull origin main', {
-                cwd: process.cwd(),
-                     stdio: 'pipe'
-            });
+            const cwd = process.cwd();
+
+            let gitAvailable = false;
+            try {
+                execSync('git --version', { stdio: 'pipe' });
+                gitAvailable = true;
+            } catch {}
+
+            if (gitAvailable) {
+                const hasGit = fs.existsSync(path.join(cwd, '.git'));
+
+                if (!hasGit) {
+                    execSync(`git init && git remote add origin ${REPO_URL}`, { cwd, stdio: 'pipe' });
+                }
+
+                execSync(`git fetch origin ${BRANCH}`, { cwd, stdio: 'pipe' });
+                execSync(`git reset --hard origin/${BRANCH}`, { cwd, stdio: 'pipe' });
+            } else {
+                const zipUrl = `https://github.com/hanifssh/redskull/archive/refs/heads/${BRANCH}.zip`;
+                execSync(`curl -L ${zipUrl} -o /tmp/redskull.zip`, { stdio: 'pipe' });
+                execSync(`unzip -o /tmp/redskull.zip -d /tmp/`, { stdio: 'pipe' });
+                execSync(`cp -r /tmp/redskull-${BRANCH}/* ${cwd}/`, { stdio: 'pipe' });
+                execSync(`rm -rf /tmp/redskull.zip /tmp/redskull-${BRANCH}`, { stdio: 'pipe' });
+            }
 
             try {
-                execSync('npm install', {
-                    cwd: process.cwd(),
-                         stdio: 'pipe'
-                });
+                execSync('npm install', { cwd, stdio: 'pipe' });
             } catch (npmErr) {
                 console.error('[update] npm install failed:', npmErr.message);
             }
 
-            const pluginsDir = path.join(process.cwd(), 'plugins');
-            clearRequireCache(pluginsDir);
+            await sock.sendMessage(from, { text: '✅ Update complete. Restarting bot…' });
 
-            global.commands.clear();
-            for (const cat in global.categories) {
-                delete global.categories[cat];
-            }
-
-            const loadPlugins = () => {
-                const collectFiles = (dir) => {
-                    let results = [];
-                    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-                        const fullPath = path.join(dir, entry.name);
-                        if (entry.isDirectory()) {
-                            results = results.concat(collectFiles(fullPath));
-                        } else if (entry.isFile() && entry.name.endsWith('.js') && !entry.name.startsWith('_')) {
-                            results.push(fullPath);
-                        }
-                    }
-                    return results;
-                };
-                const files = collectFiles(pluginsDir);
-                let loaded = 0;
-                for (const file of files) {
-                    try {
-                        delete require.cache[require.resolve(file)];
-                        const plugin = require(file);
-                        if (plugin.name && typeof plugin.execute === 'function') {
-                            if (typeof global.registerCommand === 'function') {
-                                global.registerCommand(plugin);
-                            }
-                            loaded++;
-                        }
-                    } catch (err) {
-                        console.error(`[update] Error loading ${file}:`, err.message);
-                    }
-                }
-                console.log(`[update] Reloaded ${loaded} plugins`);
-            };
-
-            loadPlugins();
-            await sock.sendMessage(from, { text: '✅ Update complete. Plugins reloaded.' });
+            // Restart
+            setTimeout(() => process.exit(0), 2000);
 
         } catch (err) {
             console.error('[update] Error:', err);
             await sock.sendMessage(from, {
-                text: '❌ Update failed. See console for details.\n' +
-                'Manual update: `git pull origin main && npm install` then restart the bot.'
+                text: '❌ Update failed. See console for details.'
             });
         }
     }

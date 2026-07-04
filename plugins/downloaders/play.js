@@ -38,7 +38,8 @@ module.exports = {
         '--print', '%(thumbnail)s',
         '--skip-download',
         '--no-warnings',
-        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
+        '--extractor-args', 'youtube:player_client=android',
       ];
 
       console.log(`🔍 Searching: ${query}`);
@@ -88,7 +89,7 @@ module.exports = {
         '--add-metadata',
         '--no-warnings',
         '--restrict-filenames',
-        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
         '--extractor-args', 'youtube:player_client=android',
         '--geo-bypass',
         '-o', outputTemplate,
