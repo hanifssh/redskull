@@ -1,14 +1,25 @@
-const { execFile } = require('child_process');
+const { execFile, execSync } = require('child_process');
 const { promisify } = require('util');
 const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
+const ytdl = require('ytdl-core');
+const ffmpegStatic = require('ffmpeg-static');
 
 const execFileAsync = promisify(execFile);
 const TEMP_DIR = './temp';
 
 if (!global.pendingYtDownload) global.pendingYtDownload = new Map();
 const PENDING_EXPIRE = 5 * 60 * 1000;
+
+function getFfmpeg() {
+    try {
+        execSync('ffmpeg -version', { stdio: 'ignore' });
+        return 'ffmpeg';
+    } catch {
+        return ffmpegStatic;
+    }
+}
 
 (function attachYtChoiceListener() {
     if (!global.sock) return setTimeout(attachYtChoiceListener, 500);
@@ -47,6 +58,8 @@ async function processDownload(chatJid, pending, wantVideo) {
         await fs.mkdir(outputDir, { recursive: true });
         const outputTemplate = path.join(outputDir, '%(title).70s.%(ext)s');
 
+        const ffmpeg = getFfmpeg();
+
         if (wantVideo) {
             const videoArgs = [
                 url,
@@ -56,15 +69,25 @@ async function processDownload(chatJid, pending, wantVideo) {
                 '--restrict-filenames',
                 '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
                 '--extractor-args', 'youtube:player_client=android',
+                '--ffmpeg-location', ffmpeg,
                 '-o', outputTemplate,
             ];
-            await execFileAsync('yt-dlp', videoArgs, { timeout: 120000 });
 
-            const files = await fs.readdir(outputDir);
-            const videoFile = files.find(f => f.endsWith('.mp4'));
-            if (!videoFile) throw new Error('No video file found');
+            let videoBuffer;
+            try {
+                await execFileAsync('yt-dlp', videoArgs, { timeout: 120000 });
+                const files = await fs.readdir(outputDir);
+                const videoFile = files.find(f => f.endsWith('.mp4'));
+                if (!videoFile) throw new Error('No video file found');
+                videoBuffer = await fs.readFile(path.join(outputDir, videoFile));
+            } catch (ytdlpErr) {
+                console.log('[ytdownload] yt-dlp video failed, trying ytdl-core...');
+                const stream = ytdl(url, { filter: 'videoandaudio', quality: 'highest', highWaterMark: 1024 * 1024 * 10 });
+                const chunks = [];
+                for await (const chunk of stream) chunks.push(chunk);
+                videoBuffer = Buffer.concat(chunks);
+            }
 
-            const videoBuffer = await fs.readFile(path.join(outputDir, videoFile));
             await sock.sendMessage(chatJid, {
                 video: videoBuffer,
                 caption: `🎬 *${title}*\n👤 ${uploader || 'Unknown'} | ⏱ ${duration || '?'}s | 👁 ${views ? parseInt(views).toLocaleString() : '?'}`,
@@ -83,15 +106,25 @@ async function processDownload(chatJid, pending, wantVideo) {
                 '--restrict-filenames',
                 '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
                 '--extractor-args', 'youtube:player_client=android',
+                '--ffmpeg-location', ffmpeg,
                 '-o', outputTemplate,
             ];
-            await execFileAsync('yt-dlp', audioArgs, { timeout: 120000 });
 
-            const files = await fs.readdir(outputDir);
-            const audioFile = files.find(f => f.endsWith('.mp3'));
-            if (!audioFile) throw new Error('No audio file found');
+            let audioBuffer;
+            try {
+                await execFileAsync('yt-dlp', audioArgs, { timeout: 120000 });
+                const files = await fs.readdir(outputDir);
+                const audioFile = files.find(f => f.endsWith('.mp3'));
+                if (!audioFile) throw new Error('No audio file found');
+                audioBuffer = await fs.readFile(path.join(outputDir, audioFile));
+            } catch (ytdlpErr) {
+                console.log('[ytdownload] yt-dlp audio failed, trying ytdl-core...');
+                const stream = ytdl(url, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1024 * 1024 * 10 });
+                const chunks = [];
+                for await (const chunk of stream) chunks.push(chunk);
+                audioBuffer = Buffer.concat(chunks);
+            }
 
-            const audioBuffer = await fs.readFile(path.join(outputDir, audioFile));
             await sock.sendMessage(chatJid, {
                 audio: audioBuffer,
                 mimetype: 'audio/mpeg',
@@ -114,7 +147,7 @@ async function processDownload(chatJid, pending, wantVideo) {
 
     } catch (error) {
         console.error('[ytdownload] download error:', error);
-        await sock.sendMessage(chatJid, { text: `❌ Download failed: ${error.message}\nYou can try the other format by replying 1 or 2.` });
+        await sock.sendMessage(chatJid, { text: '❌ *Download failed.*\n\nThe video may be unavailable or blocked. Try the other format by replying 1 or 2, or try a different video.' });
     }
 }
 
@@ -135,7 +168,7 @@ module.exports = {
             const pending = global.pendingYtDownload.get(senderJid);
             if (!pending || Date.now() - pending.timestamp > PENDING_EXPIRE) {
                 global.pendingYtDownload.delete(senderJid);
-                return sock.sendMessage(from, { text: '❌ No pending download. Use `.ytdownload <link>` first.' });
+                return sock.sendMessage(from, { text: '❌ *No pending download.* Use `.ytdownload <link>` first.' });
             }
             await processDownload(from, pending, arg === '1');
             global.pendingYtDownload.delete(senderJid);
@@ -152,6 +185,8 @@ module.exports = {
         global.pendingYtDownload.delete(senderJid);
 
         await sock.sendMessage(from, { text: '🔍 Fetching video info…' });
+
+        let infoData = null;
 
         try {
             const infoArgs = [
@@ -170,39 +205,66 @@ module.exports = {
 
             const { stdout } = await execFileAsync('yt-dlp', infoArgs, { timeout: 30000 });
             const lines = stdout.trim().split('\n');
-            if (lines.length < 5) throw new Error('Could not retrieve video info.');
-
-            const [title, duration, views, uploader, thumbnailUrl] = lines;
-
-            global.pendingYtDownload.set(senderJid, {
-                url,
-                title,
-                thumbnailUrl,
-                uploader,
-                duration,
-                views,
-                chatJid: from,
-                timestamp: Date.now(),
-            });
-
-            let caption = `🎬 *${title}*\n`;
-            caption += `👤 *Channel:* ${uploader || 'Unknown'}\n`;
-            caption += `⏱ *Duration:* ${duration || '?'}s\n`;
-            if (views) caption += `👁 *Views:* ${parseInt(views).toLocaleString()}\n`;
-            caption += `\nChoose format:\n`;
-            caption += `Reply *1* for video (mp4)\n`;
-            caption += `Reply *2* for audio (mp3)`;
-
-            try {
-                const thumbResp = await axios.get(thumbnailUrl, { responseType: 'arraybuffer' });
-                const thumbBuffer = Buffer.from(thumbResp.data);
-                await sock.sendMessage(from, { image: thumbBuffer, caption });
-            } catch {
-                await sock.sendMessage(from, { text: caption });
+            if (lines.length >= 5) {
+                infoData = {
+                    title: lines[0],
+                    duration: lines[1],
+                    views: lines[2],
+                    uploader: lines[3],
+                    thumbnailUrl: lines[4],
+                    url,
+                };
             }
-        } catch (infoError) {
-            console.error('[ytdownload] info error:', infoError);
-            await sock.sendMessage(from, { text: `❌ Failed to fetch video info. Is the link valid?\n${infoError.message}` });
+        } catch (ytdlpInfoErr) {
+            console.log('[ytdownload] yt-dlp info failed, trying ytdl-core...');
+        }
+
+        if (!infoData) {
+            try {
+                const info = await ytdl.getInfo(url);
+                const details = info.videoDetails;
+                const thumbnails = details.thumbnails;
+                infoData = {
+                    title: details.title,
+                    duration: details.lengthSeconds,
+                    views: details.viewCount,
+                    uploader: details.author?.name || 'Unknown',
+                    thumbnailUrl: thumbnails?.[thumbnails.length - 1]?.url || '',
+                    url,
+                };
+            } catch (ytdlCoreErr) {
+                console.error('[ytdownload] ytdl-core info also failed');
+                return sock.sendMessage(from, { text: '❌ *Failed to fetch video info.*\n\nThe link may be invalid or the video is private. Please check the URL and try again.' });
+            }
+        }
+
+        const { title, duration, views, uploader, thumbnailUrl } = infoData;
+
+        global.pendingYtDownload.set(senderJid, {
+            url,
+            title,
+            thumbnailUrl,
+            uploader,
+            duration,
+            views,
+            chatJid: from,
+            timestamp: Date.now(),
+        });
+
+        let caption = `🎬 *${title}*\n`;
+        caption += `👤 *Channel:* ${uploader || 'Unknown'}\n`;
+        caption += `⏱ *Duration:* ${duration || '?'}s\n`;
+        if (views) caption += `👁 *Views:* ${parseInt(views).toLocaleString()}\n`;
+        caption += `\nChoose format:\n`;
+        caption += `Reply *1* for video (mp4)\n`;
+        caption += `Reply *2* for audio (mp3)`;
+
+        try {
+            const thumbResp = await axios.get(thumbnailUrl, { responseType: 'arraybuffer' });
+            const thumbBuffer = Buffer.from(thumbResp.data);
+            await sock.sendMessage(from, { image: thumbBuffer, caption });
+        } catch {
+            await sock.sendMessage(from, { text: caption });
         }
     }
 };
