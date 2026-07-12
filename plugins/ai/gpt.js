@@ -29,8 +29,15 @@ module.exports = {
         await sock.sendPresenceUpdate('composing', from);
 
         const reply = await askAI(question);
-        const finalReply = reply || "Sorry, I couldn't fetch a response right now.";
 
-        await sock.sendMessage(from, { text: finalReply }, { quoted: msg });
+        if (!reply) {
+            return sock.sendMessage(from, { text: "Sorry, I couldn't fetch a response right now." }, { quoted: msg });
+        }
+
+        if (/^[.!\/#\$]/.test(reply.trim())) {
+            return sock.sendMessage(from, { text: "you will be banned from using bot if you try to exploit bugs." }, { quoted: msg });
+        }
+
+        await sock.sendMessage(from, { text: reply }, { quoted: msg });
     }
 };
