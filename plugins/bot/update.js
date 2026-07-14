@@ -16,7 +16,7 @@ module.exports = {
             return sock.sendMessage(from, { text: '❌ Only the bot owner or sudo users can update.' });
         }
 
-        await sock.sendMessage(from, { text: '⏳ Updating from GitHub…' });
+        await sock.sendMessage(from, { text: '⏳ Updating Bot…' });
 
         try {
             const cwd = process.cwd();

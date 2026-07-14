@@ -1,6 +1,6 @@
 module.exports = {
     name: 'repo',
-    aliases: [],
+    aliases: ['script' , 'code' ,],
     category: 'Bot',
     desc: 'Show the bot source code and developer contact',
 

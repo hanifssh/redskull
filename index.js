@@ -626,7 +626,21 @@ async function startBot() {
                 }
 
                 const perms = { isOwner: senderIsOwner, isSudo: senderIsSudo };
-                await cmd.execute(sock, from, msg, args, perms);
+
+                const originalSend = sock.sendMessage;
+                sock.sendMessage = async (...sendArgs) => {
+                    if (sendArgs.length < 3) {
+                        sendArgs[2] = { quoted: msg };
+                    }
+                    return originalSend.apply(sock, sendArgs);
+                };
+
+                try {
+                    await cmd.execute(sock, from, msg, args, perms);
+                } finally {
+                    sock.sendMessage = originalSend;
+                }
+
             } catch (err) {
                 console.error('Message error:', err);
             }
