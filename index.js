@@ -263,7 +263,7 @@ async function showMenu(sock, from, senderName) {
     menu += `┃📦│ *Plugins* : ${commands.size}\n┃🗃️│ *Ram* : ${usedMem}/${totalMem}MB\n┃⏳│ *Uptime* : ${uptimeStr}\n`;
     menu += `┃💻│ *Platform* : ${os.platform()} (${os.type()})\n┃🌐│ *Mode* : ${modeEmoji}\n╰━─━─━─≪✠≫─━─━─━╯\n`;
 
-    const categoryOrder = ['AI', 'Download', 'Admin', 'Group', 'Tools', 'Editor', 'Audio', 'Video', 'Economy', 'User', 'Bot', 'Game', 'General'];
+    const categoryOrder = ['AI', 'Download', 'Admin', 'Group', 'Tools', 'Editor', 'Fun', 'Video', 'Economy', 'User', 'Bot', 'Games', 'General'];
     for (const cat of categoryOrder) {
         if (!categories[cat] || categories[cat].length === 0) continue;
         menu += `╭━─━─━─≪❥≫\n│   *${cat.toUpperCase()} ❞*\n╰━─━─━─≪❥≫\n`;
