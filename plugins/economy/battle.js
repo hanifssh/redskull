@@ -1,4 +1,4 @@
-const { readEco, writeEco, initUser } = require('./_db');
+const { readEco, writeEco, initUser, getPrefix } = require('./_db');
 
 if (!global.pendingBattles) global.pendingBattles = new Map();
 const CHALLENGE_TIMEOUT = 10 * 60 * 1000;
@@ -20,23 +20,6 @@ async function getOpponentName(sock, db, jid) {
         } catch {}
     }
     return getDisplayName(db, jid, 'Opponent');
-}
-
-function findUserData(db, jid, groupJid) {
-    if (db.users[jid]) return db.users[jid];
-    const cache = global.messageCache;
-    if (cache && groupJid.endsWith('@g.us')) {
-        const msgs = cache.get(groupJid);
-        if (msgs) {
-            for (let i = msgs.length - 1; i >= 0; i--) {
-                const m = msgs[i];
-                if (m.participant === jid && m.participantAlt && db.users[m.participantAlt]) {
-                    return db.users[m.participantAlt];
-                }
-            }
-        }
-    }
-    return null;
 }
 
 module.exports = {
@@ -78,7 +61,12 @@ module.exports = {
                 });
             }
 
-            const you = initUser(db, senderJid);
+            const you = await initUser(sock, db, senderJid, msg.pushName || 'User');
+            if (!you.registered) {
+                return sock.sendMessage(from, {
+                    text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+                }, { quoted: msg });
+            }
             const yourCard = you.pokemonDeck.find(c => c.name.toLowerCase() === yourCardName.toLowerCase());
             if (!yourCard) {
                 return sock.sendMessage(from, { text: `❌ You don't have a card named *${yourCardName}*.` });
@@ -133,13 +121,18 @@ module.exports = {
                 });
             }
 
-            const opponentData = initUser(db, senderJid);
+            const opponentData = await initUser(sock, db, senderJid);
+            if (!opponentData.registered) {
+                return sock.sendMessage(from, {
+                    text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+                }, { quoted: msg });
+            }
             const opponentCard = opponentData.pokemonDeck.find(c => c.name.toLowerCase() === opponentCardName.toLowerCase());
             if (!opponentCard) {
                 return sock.sendMessage(from, { text: `❌ You don't have a card named *${opponentCardName}*.` });
             }
 
-            const challengerData = initUser(db, challenge.challengerJid);
+            const challengerData = await initUser(sock, db, challenge.challengerJid);
             const challengerCard = challengerData.pokemonDeck.find(c => c.name.toLowerCase() === challenge.challengerCard.toLowerCase());
             if (!challengerCard) {
                 global.pendingBattles.delete(key);
@@ -174,7 +167,7 @@ module.exports = {
             const winnerName = challengerWins ? challengerName : opponentName;
             const loserName = challengerWins ? opponentName : challengerName;
 
-            const winner = initUser(db, winnerJid);
+            const winner = await initUser(sock, db, winnerJid);
             winner.wallet += 500;
             writeEco(db);
 

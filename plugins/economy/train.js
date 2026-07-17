@@ -1,4 +1,4 @@
-const { readEco, writeEco, initUser } = require('./_db');
+const { readEco, writeEco, initUser, getPrefix } = require('./_db');
 
 module.exports = {
     name: 'train',
@@ -12,7 +12,12 @@ module.exports = {
 
         const senderJid = msg.key.participant || msg.key.remoteJid;
         const db = readEco();
-        const user = initUser(db, senderJid, msg.pushName || 'User');
+        const user = await initUser(sock, db, senderJid, msg.pushName || 'User');
+        if (!user.registered) {
+            return sock.sendMessage(from, {
+                text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+            }, { quoted: msg });
+        }
 
         if (!args[0]) return sock.sendMessage(from, {
             text: '❌ Please provide the name of the card to train.\nExample: `.train Charizard VMAX`'

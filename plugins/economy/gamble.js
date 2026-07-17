@@ -1,4 +1,4 @@
-const { readEco, writeEco, initUser } = require('./_db');
+const { readEco, writeEco, initUser, getPrefix } = require('./_db');
 
 const EMOJIS = ['🍒', '💰', '🍀', '💎', '🔥', '⭐', '7️⃣'];
 
@@ -37,10 +37,10 @@ function checkWin(gridText) {
         }
     }
     if (rows[0][0] === rows[1][1] && rows[1][1] === rows[2][2]) {
-        lines.push({ type: 'diag', index: 1 }); // top‑left → bottom‑right
+        lines.push({ type: 'diag', index: 1 });
     }
     if (rows[0][2] === rows[1][1] && rows[1][1] === rows[2][0]) {
-        lines.push({ type: 'diag', index: 2 }); // top‑right → bottom‑left
+        lines.push({ type: 'diag', index: 2 });
     }
 
     if (lines.length === 0) return { won: false, multiplier: 0 };
@@ -58,15 +58,14 @@ function checkWin(gridText) {
         if (mult > maxMult) maxMult = mult;
     });
 
-        return { won: true, multiplier: maxMult };
+    return { won: true, multiplier: maxMult };
 }
-// ────────────────────────────────────────────────────────────
 
 module.exports = {
-    name:     'gamble',
-    aliases:  [],
+    name: 'gamble',
+    aliases: [],
     category: 'Economy',
-    desc:     'Spin the slot machine and risk your cash! (.gamble <amount|all>)',
+    desc: 'Spin the slot machine and risk your cash! (.gamble <amount|all>)',
 
     execute: async (sock, from, msg, args, perms) => {
         if (!from.endsWith('@g.us'))
@@ -76,8 +75,13 @@ module.exports = {
         const rawText   = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
         const prefix    = rawText.charAt(0);
 
-        const db   = readEco();
-        const user = initUser(db, senderJid, msg.pushName || 'User');
+        const db = readEco();
+        const user = await initUser(sock, db, senderJid, msg.pushName || 'User');
+        if (!user.registered) {
+            return sock.sendMessage(from, {
+                text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+            }, { quoted: msg });
+        }
 
         if (!args[0])
             return sock.sendMessage(from, { text: `👉 Usage: \`${prefix}gamble <amount>\` or \`${prefix}gamble all\`` });
@@ -101,7 +105,7 @@ module.exports = {
             await sleep(600);
             await sock.sendMessage(from, {
                 text: `🎰 *SLOT MACHINE* 🎰\n\n${spinGrid()}\n\n_Spinning..._`,
-                                   edit: sent.key
+                edit: sent.key
             });
         }
 

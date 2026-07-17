@@ -25,31 +25,60 @@ function saveSpawns(data) {
     fs.writeFileSync(SPAWN_PATH, JSON.stringify(data, null, 2));
 }
 
-function initUser(db, jid, name = 'User') {
+function getPrefix() {
+    try {
+        const vars = JSON.parse(fs.readFileSync(path.join(__dirname, '../../database/vars.json'), 'utf-8'));
+        return vars.PREFIX || '.';
+    } catch {
+        return '.';
+    }
+}
+
+async function initUser(sock, db, jid, fallback = 'User') {
+    let realName = fallback;
+    try {
+        if (sock && jid) {
+            const contact = await sock.getContact?.(jid) || null;
+            if (contact) {
+                const name = contact.name || contact.notify || contact.verifiedName || contact.pushName;
+                if (name && name !== 'undefined') realName = name;
+            }
+        }
+    } catch {}
+
     if (!db.users[jid]) {
         db.users[jid] = {
-            name,
-            wallet:    500,
-            bank:      0,
-            orbs:      0,
-            deck:      [],
+            name: realName,
+            wallet: 500,
+            bank: 0,
+            orbs: 0,
+            deck: [],
             pokemonDeck: [],
+            registered: false,
             lastDaily: 0,
-            lastDig:   0,
-            lastFish:  0,
+            lastDig: 0,
+            lastFish: 0,
         };
     }
+
     const u = db.users[jid];
-    if (!u.deck)          u.deck      = [];
-    if (!u.pokemonDeck)   u.pokemonDeck = [];
-    if (!u.orbs)          u.orbs      = 0;
-    if (!u.lastDig)       u.lastDig   = 0;
-    if (!u.lastFish)      u.lastFish  = 0;
-    if (!u.lastDaily)     u.lastDaily = 0;
-    if (!u.lastHunt) u.lastHunt = 0;
+
+    if (realName && realName !== 'User' && realName !== 'undefined') {
+        u.name = realName;
+    }
+
+    if (!u.deck)          u.deck          = [];
+    if (!u.pokemonDeck)   u.pokemonDeck   = [];
+    if (!u.orbs)          u.orbs          = 0;
+    if (!u.lastDig)       u.lastDig       = 0;
+    if (!u.lastFish)      u.lastFish      = 0;
+    if (!u.lastDaily)     u.lastDaily     = 0;
+    if (!u.lastHunt)      u.lastHunt      = 0;
+    if (u.registered === undefined) u.registered = false;
+
     return u;
 }
 
 const activeSpawns = new Map();
 
-module.exports = { readEco, writeEco, getSpawns, saveSpawns, initUser, activeSpawns };
+module.exports = { readEco, writeEco, getSpawns, saveSpawns, initUser, activeSpawns, getPrefix };

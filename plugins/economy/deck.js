@@ -1,10 +1,10 @@
-const { readEco, initUser } = require('./_db');
+const { readEco, initUser, getPrefix } = require('./_db');
 
 module.exports = {
-    name:     'deck',
-    aliases:  [],
+    name: 'deck',
+    aliases: [],
     category: 'Economy',
-    desc:     'View all anime cards in your collection',
+    desc: 'View all anime cards in your collection',
 
     execute: async (sock, from, msg, args, perms) => {
         if (!from.endsWith('@g.us'))
@@ -12,7 +12,12 @@ module.exports = {
 
         const senderJid = msg.key.participant || msg.key.remoteJid;
         const db        = readEco();
-        const user      = initUser(db, senderJid, msg.pushName || 'User');
+        const user      = await initUser(sock, db, senderJid, msg.pushName || 'User');
+        if (!user.registered) {
+            return sock.sendMessage(from, {
+                text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+            }, { quoted: msg });
+        }
 
         if (user.deck.length === 0) {
             return sock.sendMessage(from, {

@@ -1,7 +1,7 @@
 const axios = require('axios');
-const { readEco, writeEco, initUser } = require('./_db');
+const { readEco, writeEco, initUser, getPrefix } = require('./_db');
 
-const HUNT_COOLDOWN = 60 * 60 * 1000; // 1 hour
+const HUNT_COOLDOWN = 60 * 60 * 1000;
 const POKEMON_API_KEY = '1d2fd177-b0fe-415b-8739-e3df4ff6ea63';
 const BASE_URL = 'https://api.pokemontcg.io/v2/cards';
 
@@ -42,7 +42,7 @@ module.exports = {
     name: 'hunt',
     aliases: [],
     category: 'Economy',
-    desc: 'Hunt a wild Pokémon with your own card. Win or lose cash. 1‑hour cooldown. Usage: .hunt <your card name>',
+    desc: 'Hunt a wild Pokémon with your own card. Win or lose cash. 1-hour cooldown. Usage: .hunt <your card name>',
 
     execute: async (sock, from, msg, args) => {
         if (!from.endsWith('@g.us'))
@@ -50,7 +50,12 @@ module.exports = {
 
         const senderJid = msg.key.participant || msg.key.remoteJid;
         const db = readEco();
-        const user = initUser(db, senderJid, msg.pushName || 'User');
+        const user = await initUser(sock, db, senderJid, msg.pushName || 'User');
+        if (!user.registered) {
+            return sock.sendMessage(from, {
+                text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+            }, { quoted: msg });
+        }
 
         if (!user.lastHunt) user.lastHunt = 0;
         const diff = Date.now() - user.lastHunt;
@@ -104,7 +109,7 @@ module.exports = {
                 `Power: ${yourPower} vs ${wildPower}\n\n` +
                 `💰 Earned *+${cashEarned} 💵*\n` +
                 `💼 New wallet: ${user.wallet.toLocaleString()} 💵`,
-                                   mentions: [senderJid]
+                mentions: [senderJid]
             });
         } else if (wildPower > yourPower) {
             const cashLost = Math.min(user.wallet, Math.floor(wild.hp * 0.3));
@@ -121,7 +126,7 @@ module.exports = {
                 `Power: ${yourPower} vs ${wildPower}\n\n` +
                 `💸 Lost *-${cashLost} 💵*\n` +
                 `💼 New wallet: ${user.wallet.toLocaleString()} 💵`,
-                                   mentions: [senderJid]
+                mentions: [senderJid]
             });
         } else {
             writeEco(db);

@@ -1,10 +1,10 @@
-const { readEco, writeEco, initUser } = require('./_db');
+const { readEco, writeEco, initUser, getPrefix } = require('./_db');
 
 module.exports = {
-    name:     'donate',
-    aliases:  ['pay', 'transfer'],
+    name: 'donate',
+    aliases: ['pay', 'transfer'],
     category: 'Economy',
-    desc:     'Donate cash to another member — .donate @user <amount>',
+    desc: 'Donate cash to another member — .donate @user <amount>',
 
     execute: async (sock, from, msg, args, perms) => {
         if (!from.endsWith('@g.us'))
@@ -28,8 +28,13 @@ module.exports = {
             return sock.sendMessage(from, { text: `👉 Usage: \`${prefix}donate @user <amount>\`` });
 
         const db       = readEco();
-        const sender   = initUser(db, senderJid,  msg.pushName || 'Donor');
-        const receiver = initUser(db, mentioned,   'User');
+        const sender   = await initUser(sock, db, senderJid, msg.pushName || 'Donor');
+        if (!sender.registered) {
+            return sock.sendMessage(from, {
+                text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+            }, { quoted: msg });
+        }
+        const receiver = await initUser(sock, db, mentioned, 'User');
 
         if (amount > sender.wallet)
             return sock.sendMessage(from, { text: `❌ Not enough cash! You have *${sender.wallet} 💵* in wallet.` });

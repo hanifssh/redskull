@@ -1,13 +1,13 @@
-const { readEco, writeEco, initUser } = require('./_db');
+const { readEco, writeEco, initUser, getPrefix } = require('./_db');
 
 const ROB_COOLDOWN = 5 * 60 * 1000;
 const robCooldowns = new Map();
 
 module.exports = {
-    name:     'rob',
-    aliases:  [],
+    name: 'rob',
+    aliases: [],
     category: 'Economy',
-    desc:     'Attempt to rob another player\'s wallet — .rob @user',
+    desc: 'Attempt to rob another player\'s wallet — .rob @user',
 
     execute: async (sock, from, msg, args, perms) => {
         if (!from.endsWith('@g.us'))
@@ -34,8 +34,13 @@ module.exports = {
         }
 
         const db      = readEco();
-        const robber  = initUser(db, senderJid, msg.pushName || 'Robber');
-        const victim  = initUser(db, target,     'Victim');
+        const robber  = await initUser(sock, db, senderJid, msg.pushName || 'Robber');
+        if (!robber.registered) {
+            return sock.sendMessage(from, {
+                text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+            }, { quoted: msg });
+        }
+        const victim  = await initUser(sock, db, target, 'Victim');
 
         if (victim.wallet < 100)
             return sock.sendMessage(from, { text: '❌ That person is too broke to rob! They have less than *100 💵* on hand.' });

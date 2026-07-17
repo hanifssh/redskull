@@ -1,10 +1,10 @@
 const { readEco } = require('./_db');
 
 module.exports = {
-    name:     'rich',
-    aliases:  ['leaderboard', 'lb'],
+    name: 'rich',
+    aliases: ['leaderboard', 'lb'],
     category: 'Economy',
-    desc:     'View the Top 10 richest players in the server',
+    desc: 'View the Top 10 richest players in the server',
 
     execute: async (sock, from, msg, args, perms) => {
         if (!from.endsWith('@g.us'))
@@ -13,6 +13,7 @@ module.exports = {
         const db = readEco();
 
         const sorted = Object.entries(db.users)
+            .filter(([jid, u]) => u.registered)
             .map(([jid, u]) => ({ jid, name: u.name || 'User', net: (u.wallet || 0) + (u.bank || 0) }))
             .sort((a, b) => b.net - a.net)
             .slice(0, 10);

@@ -1,4 +1,4 @@
-const { readEco, writeEco, initUser } = require('./_db');
+const { readEco, writeEco, initUser, getPrefix } = require('./_db');
 
 const COOLDOWN = 30_000;
 
@@ -23,18 +23,23 @@ function pickOutcome() {
 }
 
 module.exports = {
-    name:     'fish',
-    aliases:  [],
+    name: 'fish',
+    aliases: [],
     category: 'Economy',
-    desc:     'Cast your line and fish for cash or orbs! (30 second cooldown)',
+    desc: 'Cast your line and fish for cash or orbs! (30 second cooldown)',
 
     execute: async (sock, from, msg, args, perms) => {
         if (!from.endsWith('@g.us'))
             return sock.sendMessage(from, { text: '❌ Economy commands only work inside Groups!' });
 
         const senderJid = msg.key.participant || msg.key.remoteJid;
-        const db        = readEco();
-        const user      = initUser(db, senderJid, msg.pushName || 'User');
+        const db = readEco();
+        const user = await initUser(sock, db, senderJid, msg.pushName || 'User');
+        if (!user.registered) {
+            return sock.sendMessage(from, {
+                text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+            }, { quoted: msg });
+        }
 
         const diff = Date.now() - user.lastFish;
         if (diff < COOLDOWN) {

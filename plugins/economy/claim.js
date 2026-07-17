@@ -1,12 +1,12 @@
-const { readEco, writeEco, initUser, activeSpawns } = require('./_db');
+const { readEco, writeEco, initUser, activeSpawns, getPrefix } = require('./_db');
 
 const CARD_EXPIRE = 30 * 60 * 1000;
 
 module.exports = {
-    name:     'claim',
-    aliases:  [],
+    name: 'claim',
+    aliases: [],
     category: 'Economy',
-    desc:     'Claim an active spawned anime card — .claim <character name>',
+    desc: 'Claim an active spawned anime card — .claim <character name>',
 
     execute: async (sock, from, msg, args, perms) => {
         if (!from.endsWith('@g.us'))
@@ -17,7 +17,12 @@ module.exports = {
         const prefix    = rawText.charAt(0);
 
         const db   = readEco();
-        const user = initUser(db, senderJid, msg.pushName || 'User');
+        const user = await initUser(sock, db, senderJid, msg.pushName || 'User');
+        if (!user.registered) {
+            return sock.sendMessage(from, {
+                text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+            }, { quoted: msg });
+        }
 
         const activeCard = activeSpawns.get(from + '_card');
         if (!activeCard) {

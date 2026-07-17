@@ -1,12 +1,12 @@
-const { readEco, writeEco, initUser } = require('./_db');
+const { readEco, writeEco, initUser, getPrefix } = require('./_db');
 
-const ORB_PRICE = 500;
+const ORB_PRICE = 100;
 
 module.exports = {
-    name:     'orbs',
-    aliases:  ['buyorbs'],
+    name: 'orbs',
+    aliases: ['buyorbs'],
     category: 'Economy',
-    desc:     'Check your orbs (.orbs) or buy more (.buyorbs <qty>)',
+    desc: 'Check your orbs (.orbs) or buy more (.buyorbs <qty>)',
 
     execute: async (sock, from, msg, args, perms) => {
         if (!from.endsWith('@g.us'))
@@ -18,7 +18,12 @@ module.exports = {
         const command   = rawText.slice(prefix.length).trim().split(/\s+/)[0].toLowerCase();
 
         const db   = readEco();
-        const user = initUser(db, senderJid, msg.pushName || 'User');
+        const user = await initUser(sock, db, senderJid, msg.pushName || 'User');
+        if (!user.registered) {
+            return sock.sendMessage(from, {
+                text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
+            }, { quoted: msg });
+        }
 
         if (command === 'orbs') {
             return sock.sendMessage(from, {

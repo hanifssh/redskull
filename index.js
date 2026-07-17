@@ -36,7 +36,7 @@ try {
 
 const SESSION_DIR = './sessions';
 const PLUGINS_DIR = './plugins';
-const LOGO_PATH   = './assets/logo.jpeg';
+const LOGO_PATH   = './assets/redskull.png';
 const VARS_PATH   = './database/vars.json';
 
 const BOT_NAME = userConfig.BOT_NAME || 'RedSkull';
@@ -271,13 +271,21 @@ async function showMenu(sock, from, senderName) {
     }
     menu += `╰━─━─━─≪✠≫─━─━─━╯\n`;
 
-    try {
-        if (fs.existsSync(LOGO_PATH)) {
-            await sock.sendMessage(from, { image: fs.readFileSync(LOGO_PATH), caption: menu });
+    const vars = readVars();
+    const menuImageType = vars.MENU_IMAGE_TYPE || 'static';
+    const customImagePath = vars.MENU_IMAGE_PATH;
+
+    if (menuImageType === 'off') {
+        await sock.sendMessage(from, { text: menu });
+    } else if (customImagePath && fs.existsSync(customImagePath)) {
+        if (menuImageType === 'gif' || customImagePath.endsWith('.mp4')) {
+            await sock.sendMessage(from, { video: fs.readFileSync(customImagePath), caption: menu, gifPlayback: true });
         } else {
-            await sock.sendMessage(from, { text: menu });
+            await sock.sendMessage(from, { image: fs.readFileSync(customImagePath), caption: menu });
         }
-    } catch (_) {
+    } else if (fs.existsSync(LOGO_PATH)) {
+        await sock.sendMessage(from, { image: fs.readFileSync(LOGO_PATH), caption: menu });
+    } else {
         await sock.sendMessage(from, { text: menu });
     }
 }
@@ -537,23 +545,32 @@ async function startBot() {
         } catch (error) { process.exit(1); }
     }
 
+
     sock.ev.on('connection.update', async (update) => {
         const { connection, qr, lastDisconnect } = update;
+
         if (qr && !qrDisplayed && !isPairingMode) {
             qrDisplayed = true;
             QRCode.generate(qr, { small: true });
             setTimeout(() => { qrDisplayed = false; }, 60000);
         }
-        if (connection === 'close') {
-            qrDisplayed = false;
-            if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
-                setTimeout(() => startBot(), 5000);
-            }
-        }
+
         if (connection === 'open') {
             qrDisplayed = false;
             console.log('\n✅ CONNECTED TO WHATSAPP!');
         }
+
+        if (connection === 'close') {
+              qrDisplayed = false;
+              const statusCode = lastDisconnect?.error?.output?.statusCode;
+              console.log('❌ Disconnected:', statusCode);
+              if (statusCode !== DisconnectReason.loggedOut) {
+                  console.log('🔄 Reconnecting in 5s...');
+                  setTimeout(() => startBot(), 5000);
+              } else {
+                  console.log('❌ Logged out. Delete sessions/ folder and restart');
+              }
+          }
     });
 
     sock.ev.on('messages.upsert', async ({ messages }) => {
@@ -647,7 +664,7 @@ async function startBot() {
         }
     });
 
-    }
+}
 
 
 startBot();
