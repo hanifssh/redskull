@@ -69,12 +69,12 @@ npx playwright install chromium
 node index.js
 ```
 
-Scan QR code with WhatsApp. For 24/7 uptime:
-
+### Scan QR code with WhatsApp. For 24/7 uptime:
+```bash
 npm install -g pm2
 pm2 start index.js --name redskull
 pm2 save
-
+```
 
 ### Ubuntu / Debian
 ```bash
@@ -170,5 +170,5 @@ MIT
 ---
 
 <p align="center">
-  Made with ❤️ by <a href="https://github.com/hanifssh">Hanif</a>
+  Made with 🤍 by <a href="https://github.com/hanifssh">Hanif</a>
 </p>
