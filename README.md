@@ -66,7 +66,8 @@ git clone https://github.com/hanifssh/redskull.git
 cd redskull
 npm install
 npx playwright install chromium
-node index.js```
+node index.js
+```
 
 Scan QR code with WhatsApp. For 24/7 uptime:
 
@@ -74,10 +75,9 @@ npm install -g pm2
 pm2 start index.js --name redskull
 pm2 save
 
----
 
 ### Ubuntu / Debian
-
+```bash
 sudo apt update && sudo apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install nodejs git ffmpeg python3-pip chromium-browser -y
@@ -87,11 +87,10 @@ cd redskull
 npm install
 npx playwright install chromium
 node index.js
-
----
+```
 
 ### Arch Linux
-
+```bash
 sudo pacman -Syu
 sudo pacman -S nodejs npm git ffmpeg yt-dlp chromium
 git clone https://github.com/hanifssh/redskull.git
@@ -99,17 +98,15 @@ cd redskull
 npm install
 npx playwright install chromium
 node index.js
-
----
+```
 
 ### Docker
-
+```bash
 git clone https://github.com/hanifssh/redskull.git
 cd redskull
 docker build -t redskull .
 docker run -d --name redskull --restart unless-stopped redskull
-
----
+```
 
 ### Heroku
 
@@ -154,34 +151,6 @@ Note: Heroku free tier is discontinued. Paid plan or student credits required.
 3. Set run command to node index.js
 4. Deploy
 
----
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| PREFIX | . | Command prefix |
-| MODE | public | public or private |
-| OWNERS | [] | Owner phone numbers |
-| SUDOS | [] | Sudo user numbers |
-
----
-
-## Commands
-
-Run .menu in chat to see all available commands. Categories include:
-
-- AI — GPT, Image generation
-- Download — YouTube, Instagram, Facebook, TikTok
-- Economy — Wallet, bank, cards, orbs, gambling
-- Games — Tic Tac Toe, Chess, Word Guess
-- Reactions — 27+ anime GIF reactions
-- Group — Tag, kick, promote, antilink
-- Tools — QC stickers, define, sticker maker
-- Bot — Mode, prefix, deploy, update
-
----
-
 ## Contributing
 
 Pull requests are welcome. For major changes, open an issue first to discuss what you'd like to change.
@@ -202,4 +171,4 @@ MIT
 
 <p align="center">
   Made with ❤️ by <a href="https://github.com/hanifssh">Hanif</a>
-</p>>
+</p>
