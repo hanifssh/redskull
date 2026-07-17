@@ -1,25 +1,14 @@
-const { execFile, execSync } = require('child_process');
+const { execFile } = require('child_process');
 const { promisify } = require('util');
 const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
-const ytdl = require('ytdl-core');
-const ffmpegStatic = require('ffmpeg-static');
 
 const execFileAsync = promisify(execFile);
 const TEMP_DIR = './temp';
 
 if (!global.pendingYtDownload) global.pendingYtDownload = new Map();
 const PENDING_EXPIRE = 5 * 60 * 1000;
-
-function getFfmpeg() {
-    try {
-        execSync('ffmpeg -version', { stdio: 'ignore' });
-        return 'ffmpeg';
-    } catch {
-        return ffmpegStatic;
-    }
-}
 
 (function attachYtChoiceListener() {
     if (!global.sock) return setTimeout(attachYtChoiceListener, 500);
@@ -58,8 +47,6 @@ async function processDownload(chatJid, pending, wantVideo) {
         await fs.mkdir(outputDir, { recursive: true });
         const outputTemplate = path.join(outputDir, '%(title).70s.%(ext)s');
 
-        const ffmpeg = getFfmpeg();
-
         if (wantVideo) {
             const videoArgs = [
                 url,
@@ -67,26 +54,18 @@ async function processDownload(chatJid, pending, wantVideo) {
                 '-f', 'best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]',
                 '--no-warnings',
                 '--restrict-filenames',
-                '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
+                '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 '--extractor-args', 'youtube:player_client=android',
-                '--ffmpeg-location', ffmpeg,
                 '-o', outputTemplate,
             ];
 
-            let videoBuffer;
-            try {
-                await execFileAsync('yt-dlp', videoArgs, { timeout: 120000 });
-                const files = await fs.readdir(outputDir);
-                const videoFile = files.find(f => f.endsWith('.mp4'));
-                if (!videoFile) throw new Error('No video file found');
-                videoBuffer = await fs.readFile(path.join(outputDir, videoFile));
-            } catch (ytdlpErr) {
-                console.log('[ytdownload] yt-dlp video failed, trying ytdl-core...');
-                const stream = ytdl(url, { filter: 'videoandaudio', quality: 'highest', highWaterMark: 1024 * 1024 * 10 });
-                const chunks = [];
-                for await (const chunk of stream) chunks.push(chunk);
-                videoBuffer = Buffer.concat(chunks);
-            }
+            await execFileAsync('yt-dlp', videoArgs, { timeout: 120000 });
+
+            const files = await fs.readdir(outputDir);
+            const videoFile = files.find(f => f.endsWith('.mp4'));
+            if (!videoFile) throw new Error('No video file found');
+
+            const videoBuffer = await fs.readFile(path.join(outputDir, videoFile));
 
             await sock.sendMessage(chatJid, {
                 video: videoBuffer,
@@ -104,26 +83,18 @@ async function processDownload(chatJid, pending, wantVideo) {
                 '--add-metadata',
                 '--no-warnings',
                 '--restrict-filenames',
-                '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
+                '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 '--extractor-args', 'youtube:player_client=android',
-                '--ffmpeg-location', ffmpeg,
                 '-o', outputTemplate,
             ];
 
-            let audioBuffer;
-            try {
-                await execFileAsync('yt-dlp', audioArgs, { timeout: 120000 });
-                const files = await fs.readdir(outputDir);
-                const audioFile = files.find(f => f.endsWith('.mp3'));
-                if (!audioFile) throw new Error('No audio file found');
-                audioBuffer = await fs.readFile(path.join(outputDir, audioFile));
-            } catch (ytdlpErr) {
-                console.log('[ytdownload] yt-dlp audio failed, trying ytdl-core...');
-                const stream = ytdl(url, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1024 * 1024 * 10 });
-                const chunks = [];
-                for await (const chunk of stream) chunks.push(chunk);
-                audioBuffer = Buffer.concat(chunks);
-            }
+            await execFileAsync('yt-dlp', audioArgs, { timeout: 120000 });
+
+            const files = await fs.readdir(outputDir);
+            const audioFile = files.find(f => f.endsWith('.mp3'));
+            if (!audioFile) throw new Error('No audio file found');
+
+            const audioBuffer = await fs.readFile(path.join(outputDir, audioFile));
 
             await sock.sendMessage(chatJid, {
                 audio: audioBuffer,
@@ -146,7 +117,7 @@ async function processDownload(chatJid, pending, wantVideo) {
         await fs.rmdir(outputDir).catch(() => {});
 
     } catch (error) {
-        console.error('[ytdownload] download error:', error);
+        console.error('[ytdownload] download error:', error.message);
         await sock.sendMessage(chatJid, { text: '❌ *Download failed.*\n\nThe video may be unavailable or blocked. Try the other format by replying 1 or 2, or try a different video.' });
     }
 }
@@ -161,14 +132,14 @@ module.exports = {
         const rawText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
         const prefix = rawText.charAt(0);
         const parts = rawText.slice(prefix.length).trim().split(/\s+/);
-        const command = parts.shift().toLowerCase();
+        parts.shift();
         const arg = parts.join(' ').trim();
 
         if (arg === '1' || arg === '2') {
             const pending = global.pendingYtDownload.get(senderJid);
             if (!pending || Date.now() - pending.timestamp > PENDING_EXPIRE) {
                 global.pendingYtDownload.delete(senderJid);
-                return sock.sendMessage(from, { text: '❌ *No pending download.* Use `.ytdownload <link>` first.' });
+                return sock.sendMessage(from, { text: '❌ *No pending download.* Use `.ytdownload <link>` first.' }, { quoted: msg });
             }
             await processDownload(from, pending, arg === '1');
             global.pendingYtDownload.delete(senderJid);
@@ -178,15 +149,13 @@ module.exports = {
         if (!arg || (!arg.includes('youtube.com/') && !arg.includes('youtu.be/'))) {
             return sock.sendMessage(from, {
                 text: `📥 *YouTube Downloader*\n\nUsage:\n1. \`${prefix}ytdownload <youtube link>\`\n2. When asked, reply *1* (video) or *2* (audio)`
-            });
+            }, { quoted: msg });
         }
 
         const url = arg;
         global.pendingYtDownload.delete(senderJid);
 
-        await sock.sendMessage(from, { text: '🔍 Fetching video info…' });
-
-        let infoData = null;
+        await sock.sendMessage(from, { text: '🔍 Fetching video info…' }, { quoted: msg });
 
         try {
             const infoArgs = [
@@ -199,72 +168,52 @@ module.exports = {
                 '--print', '%(thumbnail)s',
                 '--skip-download',
                 '--no-warnings',
-                '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
+                '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 '--extractor-args', 'youtube:player_client=android',
             ];
 
             const { stdout } = await execFileAsync('yt-dlp', infoArgs, { timeout: 30000 });
             const lines = stdout.trim().split('\n');
-            if (lines.length >= 5) {
-                infoData = {
-                    title: lines[0],
-                    duration: lines[1],
-                    views: lines[2],
-                    uploader: lines[3],
-                    thumbnailUrl: lines[4],
-                    url,
-                };
-            }
-        } catch (ytdlpInfoErr) {
-            console.log('[ytdownload] yt-dlp info failed, trying ytdl-core...');
-        }
+            if (lines.length < 5) throw new Error('Could not fetch video info');
 
-        if (!infoData) {
+            const title = lines[0];
+            const duration = lines[1];
+            const views = lines[2];
+            const uploader = lines[3];
+            const thumbnailUrl = lines[4];
+
+            global.pendingYtDownload.set(senderJid, {
+                url,
+                title,
+                thumbnailUrl,
+                uploader,
+                duration,
+                views,
+                chatJid: from,
+                timestamp: Date.now(),
+            });
+
+            let caption = `🎬 *${title}*\n`;
+            caption += `👤 *Channel:* ${uploader || 'Unknown'}\n`;
+            caption += `⏱ *Duration:* ${duration || '?'}s\n`;
+            if (views) caption += `👁 *Views:* ${parseInt(views).toLocaleString()}\n`;
+            caption += `\nChoose format:\n`;
+            caption += `Reply *1* for video (mp4)\n`;
+            caption += `Reply *2* for audio (mp3)`;
+
             try {
-                const info = await ytdl.getInfo(url);
-                const details = info.videoDetails;
-                const thumbnails = details.thumbnails;
-                infoData = {
-                    title: details.title,
-                    duration: details.lengthSeconds,
-                    views: details.viewCount,
-                    uploader: details.author?.name || 'Unknown',
-                    thumbnailUrl: thumbnails?.[thumbnails.length - 1]?.url || '',
-                    url,
-                };
-            } catch (ytdlCoreErr) {
-                console.error('[ytdownload] ytdl-core info also failed');
-                return sock.sendMessage(from, { text: '❌ *Failed to fetch video info.*\n\nThe link may be invalid or the video is private. Please check the URL and try again.' });
+                const thumbResp = await axios.get(thumbnailUrl, { responseType: 'arraybuffer' });
+                const thumbBuffer = Buffer.from(thumbResp.data);
+                await sock.sendMessage(from, { image: thumbBuffer, caption }, { quoted: msg });
+            } catch {
+                await sock.sendMessage(from, { text: caption }, { quoted: msg });
             }
-        }
 
-        const { title, duration, views, uploader, thumbnailUrl } = infoData;
-
-        global.pendingYtDownload.set(senderJid, {
-            url,
-            title,
-            thumbnailUrl,
-            uploader,
-            duration,
-            views,
-            chatJid: from,
-            timestamp: Date.now(),
-        });
-
-        let caption = `🎬 *${title}*\n`;
-        caption += `👤 *Channel:* ${uploader || 'Unknown'}\n`;
-        caption += `⏱ *Duration:* ${duration || '?'}s\n`;
-        if (views) caption += `👁 *Views:* ${parseInt(views).toLocaleString()}\n`;
-        caption += `\nChoose format:\n`;
-        caption += `Reply *1* for video (mp4)\n`;
-        caption += `Reply *2* for audio (mp3)`;
-
-        try {
-            const thumbResp = await axios.get(thumbnailUrl, { responseType: 'arraybuffer' });
-            const thumbBuffer = Buffer.from(thumbResp.data);
-            await sock.sendMessage(from, { image: thumbBuffer, caption });
-        } catch {
-            await sock.sendMessage(from, { text: caption });
+        } catch (error) {
+            console.error('[ytdownload] info error:', error.message);
+            await sock.sendMessage(from, {
+                text: '❌ *Failed to fetch video info.*\n\nThe link may be invalid or the video is private. Please check the URL and try again.'
+            }, { quoted: msg });
         }
     }
 };

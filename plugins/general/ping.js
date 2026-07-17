@@ -6,13 +6,13 @@ module.exports = {
     const startTime = Date.now();
 
     await sock.sendMessage(from, {
-      text: "╭━─━─━─≪ 👑 ≫─━─━─━╮\n│      *REDSKULL* \n╰━─━─━─≪ 👑 ≫─━─━─━╯"
+      text: "_🏓 Pinging..._"
     });
 
     const latency = Date.now() - startTime;
 
     await sock.sendMessage(from, {
-      text: " 📡 *Latency:* " + latency + "ms"
+      text: "_📡 *Latency:* " + latency + "ms_"
     });
   }
 };

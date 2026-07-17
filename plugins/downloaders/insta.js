@@ -26,7 +26,7 @@ const SITES = [
   },
   {
     name: "savefrom.net",
-    url: "https://en1.savefrom.net/13Jc/download-from-instagram",
+    url: "https://en1.savefrom.net/14xK/download-from-instagram",
     inputSelectors: ['input[type="text"]', "input#sf_url"],
     submitSelectors: ['button[type="submit"]', "button"],
     resultSelectors: ["a.download-link", "a[download]", 'a[href*=".mp4"]'],

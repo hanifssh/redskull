@@ -4,7 +4,7 @@ module.exports = {
     name: 'honorboard',
     aliases: ['hb', 'honor'],
     category: 'Economy',
-    desc: 'View the Top 10 most honorable players based on total wealth & collection',
+    desc: 'View the Top 10 most honorable players',
 
     execute: async (sock, from, msg) => {
         if (!from.endsWith('@g.us'))
@@ -16,25 +16,15 @@ module.exports = {
         .filter(([jid, u]) => u.registered)
         .map(([jid, u]) => {
             const cash = (u.wallet || 0) + (u.bank || 0);
-            const orbValue = (u.orbs || 0) * 50;
-            const animeCardsValue = (u.deck || []).reduce((sum, card) => sum + (card.value || 0), 0);
-            const pokemonCardsValue = (u.pokemonDeck || []).reduce((sum, card) => {
-                return sum + ((card.value || 0) * (card.level || 1));
-            }, 0);
+            const cashScore = Math.floor(cash / 1000);
+            const orbScore = (u.orbs || 0) * 5;
+            const animeScore = (u.deck || []).reduce((sum, c) => sum + Math.floor((c.value || 0) / 100), 0);
+            const pokemonScore = (u.pokemonDeck || []).reduce((sum, c) => sum + Math.floor(((c.value || 0) * (c.level || 1)) / 100), 0);
+            const score = cashScore + orbScore + animeScore + pokemonScore;
 
-            const honorScore = cash + orbValue + animeCardsValue + pokemonCardsValue;
-
-            return {
-                jid,
-                name: u.name || 'User',
-                cash,
-                orbs: u.orbs || 0,
-                animeCards: (u.deck || []).length,
-             pokemonCards: (u.pokemonDeck || []).length,
-             honorScore
-            };
+            return { jid, name: u.name || 'User', score };
         })
-        .sort((a, b) => b.honorScore - a.honorScore)
+        .sort((a, b) => b.score - a.score)
         .slice(0, 10);
 
         if (ranked.length === 0)
@@ -49,15 +39,13 @@ module.exports = {
         `╰━─━─━─≪ 🏆 ≫─━─━─━╯\n\n`;
 
         ranked.forEach((u, i) => {
-            const rank = medals[i] || `${i + 1}.`;
-            text += `│ ${rank} *${u.name}*\n`;
-            text += `│    ↳ Honor Score: ${u.honorScore.toLocaleString()} 🎖️\n`;
-            text += `│    ↳ 💵 ${u.cash.toLocaleString()} | 🔮 ${u.orbs} | 🃏 ${u.animeCards} | ⚡ ${u.pokemonCards}\n`;
-            if (i < ranked.length - 1) text += `│\n`;
+            const rank = medals[i] || `#${i + 1}`;
+            text += `${rank}  *${u.name}*\n`;
+            text += `    ┖ 🎖️ ${u.score.toLocaleString()} Honor\n\n`;
         });
 
-            text += `\n╰━─━─━─≪ 👑 ≫─━─━─━╯`;
+        text += `╰━─━─━─≪ 👑 ≫─━─━─━╯`;
 
-            await sock.sendMessage(from, { text });
+        await sock.sendMessage(from, { text });
     }
 };
