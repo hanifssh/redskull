@@ -56,7 +56,7 @@
 ---
 
 ### Termux (Android)
-
+```bash
 termux-wake-lock
 pkg update && pkg upgrade -y
 pkg install nodejs git ffmpeg python -y
@@ -66,7 +66,7 @@ git clone https://github.com/hanifssh/redskull.git
 cd redskull
 npm install
 npx playwright install chromium
-node index.js
+node index.js```
 
 Scan QR code with WhatsApp. For 24/7 uptime:
 
