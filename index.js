@@ -36,7 +36,7 @@ try {
 
 const SESSION_DIR = './sessions';
 const PLUGINS_DIR = './plugins';
-const LOGO_PATH   = './assets/redskull.png';
+const LOGO_PATH   = './assets/logo.jpeg';
 const VARS_PATH   = './database/vars.json';
 
 const BOT_NAME = userConfig.BOT_NAME || 'RedSkull';
