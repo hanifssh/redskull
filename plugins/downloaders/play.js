@@ -97,16 +97,8 @@ module.exports = {
         audio: audioBuffer,
         mimetype: 'audio/mpeg',
         fileName: `${title}.mp3`,
-        contextInfo: {
-          externalAdReply: {
-            title: title,
-            body: uploader || 'Unknown Artist',
-            mediaType: 1,
-            showAdAttribution: false,
-            thumbnailUrl: thumbnailUrl || 'https://i.imgur.com/ho2Lhdv.jpeg',
-          }
-        }
-      }, { quoted: msg });
+        ptt: false
+      });
 
     } catch (error) {
       console.error('[play] error:', error.message);
