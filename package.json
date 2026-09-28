@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@lurepos/apkpure": "^0.6.0",
     "@tcgdex/sdk": "^2.9.0",
     "@whiskeysockets/baileys": "^7.0.0-rc13",
     "axios": "^1.18.1",

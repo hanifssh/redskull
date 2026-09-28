@@ -18,7 +18,7 @@ module.exports = {
         const prefix    = rawText.charAt(0);
 
         const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
-                    || msg.message?.extendedTextMessage?.contextInfo?.participant;
+        || msg.message?.extendedTextMessage?.contextInfo?.participant;
 
         if (!target)
             return sock.sendMessage(from, { text: `👉 Usage: \`${prefix}rob @user\`` });
@@ -34,13 +34,13 @@ module.exports = {
         }
 
         const db      = readEco();
-        const robber  = await initUser(sock, db, senderJid, msg.pushName || 'Robber');
+        const robber  = await initUser(sock, db, senderJid);
         if (!robber.registered) {
             return sock.sendMessage(from, {
                 text: `❌ You haven't registered for the economy yet!\nType \`${getPrefix()}register\` to join.`
             }, { quoted: msg });
         }
-        const victim  = await initUser(sock, db, target, 'Victim');
+        const victim  = await initUser(sock, db, target,);
 
         if (victim.wallet < 100)
             return sock.sendMessage(from, { text: '❌ That person is too broke to rob! They have less than *100 💵* on hand.' });
@@ -60,14 +60,14 @@ module.exports = {
 
             await sock.sendMessage(from, {
                 text:
-                    `╭━─━─━─≪ 🔫 ≫─━─━─━╮\n` +
-                    `│   *SUCCESSFUL ROBBERY!*\n` +
-                    `╰━─━─━─≪ 🔫 ≫─━─━─━╯\n` +
-                    `│ ✗ *Robber:* @${robberNum}\n` +
-                    `│ ✗ *Victim:* @${targetNum}\n` +
-                    `│ ✗ *Stolen:* ${stolen.toLocaleString()} 💵\n` +
-                    `│ 🏃 Got away clean!\n` +
-                    `╰━─━─━─≪ 💰 ≫─━─━─━╯`,
+                `╭━─━─━─≪ 🔫 ≫─━─━─━╮\n` +
+                `│   *SUCCESSFUL ROBBERY!*\n` +
+                `╰━─━─━─≪ 🔫 ≫─━─━─━╯\n` +
+                `│ ✗ *Robber:* @${robberNum}\n` +
+                `│ ✗ *Victim:* @${targetNum}\n` +
+                `│ ✗ *Stolen:* ${stolen.toLocaleString()} 💵\n` +
+                `│ 🏃 Got away clean!\n` +
+                `╰━─━─━─≪ 💰 ≫─━─━─━╯`,
                 mentions: [senderJid, target]
             });
         } else {
@@ -78,13 +78,13 @@ module.exports = {
 
             await sock.sendMessage(from, {
                 text:
-                    `╭━─━─━─≪ 🚔 ≫─━─━─━╮\n` +
-                    `│   *ROBBERY FAILED!*\n` +
-                    `╰━─━─━─≪ 🚔 ≫─━─━─━╯\n` +
-                    `│ @${robberNum} tried to rob @${targetNum}!\n` +
-                    `│ Got caught by police! 🚨\n` +
-                    `│ ✗ *Fine paid:* -${actualFine.toLocaleString()} 💵\n` +
-                    `╰━─━─━─≪ 😭 ≫─━─━─━╯`,
+                `╭━─━─━─≪ 🚔 ≫─━─━─━╮\n` +
+                `│   *ROBBERY FAILED!*\n` +
+                `╰━─━─━─≪ 🚔 ≫─━─━─━╯\n` +
+                `│ @${robberNum} tried to rob @${targetNum}!\n` +
+                `│ Got caught by police! 🚨\n` +
+                `│ ✗ *Fine paid:* -${actualFine.toLocaleString()} 💵\n` +
+                `╰━─━─━─≪ 😭 ≫─━─━─━╯`,
                 mentions: [senderJid, target]
             });
         }
