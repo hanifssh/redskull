@@ -1,9 +1,11 @@
+const activePaymentMessages = new Map();
+
 module.exports = {
-    name: 'payment',
-    aliases: ['pay', 'bombpay', 'bombpayment'],
-    description: 'Send payment request messages with hidden tag',
+    name: 'bombpayment',
+    aliases: ['bombpay', 'bombpayment'],
+    description: 'Send payment request messages with hidden tag + quote shield',
     category: 'Group',
-    sudoOnly: true,
+    ownerOnly: true,
 
     execute: async (sock, from, msg, args) => {
         if (!args || args.length === 0) {
@@ -31,8 +33,6 @@ module.exports = {
                 mentionedJid = [senderJid];
             }
 
-            let sent = 0;
-
             for (let i = 0; i < totalMessages; i++) {
                 try {
                     const paymentPayload = {
@@ -52,8 +52,19 @@ module.exports = {
                         }
                     };
 
-                    await sock.relayMessage(from, paymentPayload, {});
-                    sent++;
+                    const sent = await sock.relayMessage(from, paymentPayload, {});
+
+                    if (sent?.key?.id) {
+                        activePaymentMessages.set(sent.key.id, {
+                            from,
+                            msgKey: sent.key,
+                            timestamp: Date.now()
+                        });
+
+                        setTimeout(() => {
+                            activePaymentMessages.delete(sent.key.id);
+                        }, 10 * 60 * 1000);
+                    }
 
                     await new Promise(r => setTimeout(r, 500));
                 } catch (e) {
@@ -66,3 +77,26 @@ module.exports = {
         }
     }
 };
+
+(function paymentShieldListener() {
+    if (!global.sock) return setTimeout(paymentShieldListener, 500);
+
+    global.sock.ev.on('messages.upsert', async ({ messages, type }) => {
+        if (type !== 'notify') return;
+
+        for (const msg of messages) {
+            if (!msg.message) continue;
+            if (!msg.key.fromMe) continue;
+            if (!activePaymentMessages.has(msg.key.id)) continue;
+
+            const entry = activePaymentMessages.get(msg.key.id);
+
+            try {
+                await global.sock.sendMessage(entry.from, { text: '\u200b' }, { quoted: msg });
+                activePaymentMessages.delete(msg.key.id);
+            } catch (e) {
+                console.error('[pay-shield] quote failed:', e.message);
+            }
+        }
+    });
+})();
