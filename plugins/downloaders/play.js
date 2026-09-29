@@ -2,7 +2,6 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 const fs = require('fs').promises;
 const path = require('path');
-const axios = require('axios');
 
 const execFileAsync = promisify(execFile);
 const TEMP_DIR = './temp';
@@ -20,45 +19,11 @@ module.exports = {
       }, { quoted: msg });
     }
 
-    await sock.sendMessage(from, { text: `🔍 *Searching for:* ${query}\n⏳ Please wait...` }, { quoted: msg });
+    const statusMsg = await sock.sendMessage(from, {
+      text: `📥 *Downloading* ${query}...`
+    }, { quoted: msg });
 
     try {
-      const infoArgs = [
-        `ytsearch1:${query}`,
-        '--no-playlist',
-        '--print', '%(title)s',
-        '--print', '%(duration)s',
-        '--print', '%(uploader)s',
-        '--print', '%(webpage_url)s',
-        '--print', '%(thumbnail)s',
-        '--skip-download',
-        '--no-warnings',
-        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        '--extractor-args', 'youtube:player_client=android',
-      ];
-
-      const { stdout } = await execFileAsync('yt-dlp', infoArgs, { timeout: 60000 });
-      const lines = stdout.trim().split('\n');
-      if (lines.length < 5) throw new Error('No results found');
-
-      const title = lines[0];
-      const duration = lines[1] || '?';
-      const uploader = lines[2] || 'Unknown';
-      const url = lines[3];
-      const thumbnailUrl = lines[4] || '';
-
-      let caption = `🎵 *${title}*\n`;
-      caption += `👤 *Artist:* ${uploader}\n`;
-      caption += `⏱️ *Duration:* ${duration}s\n`;
-      caption += `\n📥 *Downloading your song...*`;
-
-      try {
-        const thumbResponse = await axios.get(thumbnailUrl, { responseType: 'arraybuffer' });
-        await sock.sendMessage(from, { image: Buffer.from(thumbResponse.data), caption }, { quoted: msg });
-      } catch {
-        await sock.sendMessage(from, { text: caption }, { quoted: msg });
-      }
-
       await fs.mkdir(TEMP_DIR, { recursive: true });
       const sessionId = `play_${Date.now()}`;
       const outputDir = path.join(TEMP_DIR, sessionId);
@@ -66,7 +31,7 @@ module.exports = {
       const outputTemplate = path.join(outputDir, '%(title).70s.%(ext)s');
 
       const audioArgs = [
-        url,
+        `ytsearch1:${query}`,
         '--no-playlist',
         '--extract-audio',
         '--audio-format', 'mp3',
@@ -77,6 +42,7 @@ module.exports = {
         '--restrict-filenames',
         '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         '--extractor-args', 'youtube:player_client=android',
+        '--concurrent-fragments', '4',
         '-o', outputTemplate,
       ];
 
@@ -87,6 +53,7 @@ module.exports = {
       if (!audioFile) throw new Error('No audio file found');
 
       const audioBuffer = await fs.readFile(path.join(outputDir, audioFile));
+      const title = audioFile.replace(/\.mp3$/, '');
 
       for (const file of files) {
         await fs.unlink(path.join(outputDir, file)).catch(() => {});

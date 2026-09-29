@@ -20,18 +20,18 @@ const SEARCH_EXPIRE = 3 * 60 * 1000;
             const choice = text.trim();
             const num = parseInt(choice);
 
-            if (num >= 1 && num <= 10 && global.pendingYtSearch.has(sender)) {
+            if (num >= 101 && num <= 110 && global.pendingYtSearch.has(sender)) {
                 const pending = global.pendingYtSearch.get(sender);
                 if (Date.now() - pending.timestamp > SEARCH_EXPIRE) {
                     global.pendingYtSearch.delete(sender);
                     continue;
                 }
-                if (num > pending.results.length) continue;
+                if (num - 101 >= pending.results.length) continue;
 
-                const video = pending.results[num - 1];
+                const video = pending.results[num - 101];
 
                 await global.sock.sendMessage(pending.chatJid, {
-                    text: `🎬 *${video.title}*\n👤 ${video.uploader || 'Unknown'} | ⏱ ${video.duration || '?'}s\n\nChoose format:\nReply *1* for video (mp4)\nReply *2* for audio (mp3)`
+                    text: `🎬 *${video.title}*\n👤 ${video.uploader || 'Unknown'} | ⏱ ${video.duration || '?'}s\n\nChoose format:\nReply *video* for mp4\nReply *audio* for mp3`
                 });
 
                 const choiceKey = `${sender}_choice`;
@@ -49,13 +49,13 @@ const SEARCH_EXPIRE = 3 * 60 * 1000;
             }
 
             const choiceKey2 = `${sender}_choice`;
-            if ((text === '1' || text === '2') && global.pendingYtSearch.has(choiceKey2)) {
+            if ((text === 'video' || text === 'audio') && global.pendingYtSearch.has(choiceKey2)) {
                 const pending = global.pendingYtSearch.get(choiceKey2);
                 if (Date.now() - pending.timestamp > SEARCH_EXPIRE) {
                     global.pendingYtSearch.delete(choiceKey2);
                     continue;
                 }
-                const wantVideo = text === '1';
+                const wantVideo = text === 'video';
                 await processSearchDownload(pending.chatJid, pending, wantVideo);
                 global.pendingYtSearch.delete(choiceKey2);
                 return;
@@ -212,9 +212,9 @@ module.exports = {
 
             let text = `🔍 *Search Results for:* ${query}\n\n`;
             results.forEach((r, i) => {
-                text += `*${i + 1}.* ${r.title}\n    👤 ${r.uploader} | ⏱ ${r.duration}\n\n`;
+                text += `*${i + 101}.* ${r.title}\n    👤 ${r.uploader} | ⏱ ${r.duration}\n\n`;
             });
-            text += `_Reply with a number (1‑10) to select a video._\n_Expires in 3 minutes._`;
+            text += `_Reply with a number (101‑110) to select a video._\n_Expires in 3 minutes._`;
 
             await sock.sendMessage(from, { text }, { quoted: msg });
 

@@ -19,13 +19,13 @@ const PENDING_EXPIRE = 5 * 60 * 1000;
             const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
             const choice = text.trim();
 
-            if ((choice === '1' || choice === '2') && global.pendingYtDownload.has(sender)) {
+            if ((choice === 'video' || choice === 'audio') && global.pendingYtDownload.has(sender)) {
                 const pending = global.pendingYtDownload.get(sender);
                 if (Date.now() - pending.timestamp > PENDING_EXPIRE) {
                     global.pendingYtDownload.delete(sender);
                     continue;
                 }
-                await processDownload(pending.chatJid, pending, choice === '1');
+                await processDownload(pending.chatJid, pending, choice === 'video');
                 global.pendingYtDownload.delete(sender);
                 return;
             }
@@ -118,14 +118,14 @@ async function processDownload(chatJid, pending, wantVideo) {
 
     } catch (error) {
         console.error('[ytdownload] download error:', error.message);
-        await sock.sendMessage(chatJid, { text: '❌ *Download failed.*\n\nThe video may be unavailable or blocked. Try the other format by replying 1 or 2, or try a different video.' });
+        await sock.sendMessage(chatJid, { text: '❌ *Download failed.*\n\nThe video may be unavailable or blocked. Try the other format (video/audio) or try a different video.' });
     }
 }
 
 module.exports = {
     name: 'ytdownload',
     aliases: ['ytdl'],
-    description: 'Download YouTube video/audio. .ytdownload <link> then reply 1 or 2',
+    description: 'Download YouTube video/audio. .ytdownload <link> then reply video or audio',
     category: 'Download',
     execute: async (sock, from, msg, args) => {
         const senderJid = msg.key.participant || msg.key.remoteJid;
@@ -135,20 +135,20 @@ module.exports = {
         parts.shift();
         const arg = parts.join(' ').trim();
 
-        if (arg === '1' || arg === '2') {
+        if (arg === 'video' || arg === 'audio') {
             const pending = global.pendingYtDownload.get(senderJid);
             if (!pending || Date.now() - pending.timestamp > PENDING_EXPIRE) {
                 global.pendingYtDownload.delete(senderJid);
                 return sock.sendMessage(from, { text: '❌ *No pending download.* Use `.ytdownload <link>` first.' }, { quoted: msg });
             }
-            await processDownload(from, pending, arg === '1');
+            await processDownload(from, pending, arg === 'video');
             global.pendingYtDownload.delete(senderJid);
             return;
         }
 
         if (!arg || (!arg.includes('youtube.com/') && !arg.includes('youtu.be/'))) {
             return sock.sendMessage(from, {
-                text: `📥 *YouTube Downloader*\n\nUsage:\n1. \`${prefix}ytdownload <youtube link>\`\n2. When asked, reply *1* (video) or *2* (audio)`
+                text: `📥 *YouTube Downloader*\n\nUsage:\n1. \`${prefix}ytdownload <youtube link>\`\n2. When asked, reply *video* (for .mp4) or *audio* (for .mp3)`
             }, { quoted: msg });
         }
 
@@ -198,8 +198,8 @@ module.exports = {
             caption += `⏱ *Duration:* ${duration || '?'}s\n`;
             if (views) caption += `👁 *Views:* ${parseInt(views).toLocaleString()}\n`;
             caption += `\nChoose format:\n`;
-            caption += `Reply *1* for video (mp4)\n`;
-            caption += `Reply *2* for audio (mp3)`;
+            caption += `Reply *video* to get video (mp4)\n`;
+            caption += `Reply *audio* to get audio (mp3)`;
 
             try {
                 const thumbResp = await axios.get(thumbnailUrl, { responseType: 'arraybuffer' });
