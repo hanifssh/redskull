@@ -1,178 +1,179 @@
-# RedSkull WhatsApp Bot
+<h1 align="center">RedSkull WhatsApp Bot</h1>
 
 <p align="center">
-  <img src="assets/logo.jpeg" width="200" alt="RedSkull Logo">
+  <img src="assets/logo.jpeg" width="180" alt="RedSkull Logo">
 </p>
 
 <p align="center">
-  A powerful, multi-feature WhatsApp bot built with Baileys. Economy system, games, reactions, AI, downloads, and more — all in one bot.
+  A multi-feature WhatsApp bot built on Baileys. Economy, card collection, canvas games, reactions, downloads, and more — all in one.
 </p>
 
 <p align="center">
-  <a href="https://github.com"><img src="https://shields.io" alt="Stars"></a>
-  <a href="https://github.com"><img src="https://shields.io" alt="Forks"></a>
-  <a href="https://github.com"><img src="https://shields.io" alt="Issues"></a>
+  <a href="https://github.com/hanifssh/redskull/stargazers"><img src="https://img.shields.io/github/stars/hanifssh/redskull?style=for-the-badge&color=f1c40f" alt="Stars"></a>
+  <a href="https://github.com/hanifssh/redskull/network/members"><img src="https://img.shields.io/github/forks/hanifssh/redskull?style=for-the-badge&color=3498db" alt="Forks"></a>
+  <a href="https://github.com/hanifssh/redskull/issues"><img src="https://img.shields.io/github/issues/hanifssh/redskull?style=for-the-badge&color=e74c3c" alt="Issues"></a>
 </p>
 
----
+<hr>
 
-## ⚠️ CRITICAL CRASH WARNING: NODE.JS VERSION REQUIREMENT
+<h2>⚠️ Node.js Version Requirement</h2>
 
-This bot relies heavily on native graphics engines (`canvas` and `sharp`) to generate gaming boards, cards, quotes, and custom stickers. 
+<p>This bot uses native graphics libraries (<code>canvas</code>, <code>sharp</code>) for card generation, chess boards, and sticker processing. <strong>You must run Node.js 20 (LTS)</strong>. Bleeding-edge versions (Node 22, 23, 24+) fail to resolve prebuilt binaries and cause silent crashes.</p>
 
-* **Do NOT use bleeding-edge Node.js versions (Node 22, 23, 24+)**. Unstable or experimental Node runtimes cannot resolve prebuilt binary modules for these libraries and will cause silent compilation crashes.
-* **YOU MUST RUN NODE.JS 20 (LTS)**. Using a stable version manager ensures your system automatically fetches compatible components out-of-the-box. 
+<p>Use a version manager like <code>fnm</code> or <code>nvm</code> to pin Node 20.</p>
 
----
+<hr>
 
-## Features
+<h2>Features</h2>
 
-- Economy System — Wallet, bank, orbs, daily rewards, rob, gamble, fish, dig
-- Card Collection — Anime & Pokémon card spawning, catching, trading, battles
-- Games — Tic Tac Toe, Chess (canvas), Word Guess, Truth or Dare
-- Reactions — 27+ anime GIF reactions (kiss, hug, slap, pat, cuddle, etc.)
-- Downloads — YouTube (video/audio), Instagram, Facebook, TikTok
-- AI — GPT chat, image generation
-- Group Management — Tag all, antilink, mute, kick, promote, demote
-- Stickers & QC — Quote sticker maker, image to sticker
-- Honor Board — Rank players by wealth, cards, and training
-- Deploy Guide — Built-in deployment instructions for all platforms
+<table>
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>What's Inside</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Economy</strong></td><td>Wallet, bank, orbs, daily rewards, rob, gamble, dig, fish</td></tr>
+    <tr><td><strong>Card Collection</strong></td><td>Anime &amp; Pokémon spawning, catching, trading, battles</td></tr>
+    <tr><td><strong>Games</strong></td><td>Tic Tac Toe, Chess (canvas), Word Guess, Truth or Dare</td></tr>
+    <tr><td><strong>Reactions</strong></td><td>27+ anime GIF reactions — kiss, hug, slap, pat, cuddle, and more</td></tr>
+    <tr><td><strong>Downloads</strong></td><td>YouTube (video/audio), Instagram, Facebook, Pinterest, TikTok</td></tr>
+    <tr><td><strong>AI</strong></td><td>GPT chat, image generation</td></tr>
+    <tr><td><strong>Fun Cards</strong></td><td>Troll, gay pride, wanted poster, fake tweet, licenses — all canvas-generated</td></tr>
+    <tr><td><strong>Group Management</strong></td><td>Tag all, antilink, mute, kick, promote, demote, purge</td></tr>
+    <tr><td><strong>Stickers &amp; QC</strong></td><td>Quote sticker maker, image-to-sticker, view-once revealer</td></tr>
+    <tr><td><strong>Honor Board</strong></td><td>Ranks players by wealth, cards, and training</td></tr>
+    <tr><td><strong>Deploy Guide</strong></td><td>Built-in <code>.deploy</code> command for all platforms</td></tr>
+  </tbody>
+</table>
 
----
+<hr>
 
-## Quick Deploy Platforms
+<h2>Prerequisites</h2>
 
-<p align="center">
-  <a href="#termux-android"><img src="https://shields.io" alt="Termux"></a>
-  <a href="#ubuntu--debian"><img src="https://shields.io" alt="Ubuntu"></a>
-  <a href="#arch-linux"><img src="https://shields.io" alt="Arch"></a>
-  <a href="#docker"><img src="https://shields.io" alt="Docker"></a>
-</p>
+<ul>
+  <li>Node.js 20 (LTS)</li>
+  <li>Git</li>
+  <li>FFmpeg</li>
+  <li>yt-dlp</li>
+  <li>A WhatsApp account (secondary recommended)</li>
+</ul>
 
----
+<hr>
 
-### Prerequisites
+<h2>Termux (Android) — <em>not fully tested</em></h2>
 
-- Node.js 20 (LTS Environment Only)
-- Git — https://git-scm.com
-- FFmpeg — https://ffmpeg.org
-- yt-dlp — https://github.com
-- A WhatsApp account (secondary recommended)
-
----
-
-### Termux (Android)
-```bash
-termux-wake-lock
-pkg update && pkg upgrade -y
+<pre><code>termux-wake-lock
+pkg update &amp;&amp; pkg upgrade -y
 pkg install nodejs-lts git ffmpeg python -y
 pip install yt-dlp
 pkg install chromium -y
-git clone https://github.com
+git clone https://github.com/hanifssh/redskull.git
 cd redskull
-npm config set allow-git all
 npm install
 npx playwright install chromium
-npm start
-```
+node index.js</code></pre>
 
-#### Scan QR code with WhatsApp. For 24/7 uptime:
-```bash
-npm install -g pm2
+<p>Scan the QR code with WhatsApp. For 24/7 uptime:</p>
+
+<pre><code>npm install -g pm2
 pm2 start index.js --name redskull
-pm2 save
-```
+pm2 save</code></pre>
 
----
+<blockquote>
+  <p>Termux users may face native module compilation issues with <code>canvas</code> and <code>sharp</code>. If that happens, run <code>npm rebuild canvas --build-from-source</code> and <code>npm rebuild sharp --build-from-source</code>.</p>
+</blockquote>
 
-### Ubuntu / Debian
-```bash
-# 1. Update and install core compilers + required graphical header packages
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y git ffmpeg python3-pip chromium-browser build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
-pip3 install yt-dlp
+<hr>
 
-# 2. Lock down the environment to Node 20 LTS
-curl -fsSL https://nodesource.com | sudo -E bash -
+<h2>Ubuntu / Debian</h2>
+
+<pre><code>sudo apt update &amp;&amp; sudo apt upgrade -y
+sudo apt install -y git ffmpeg python3-pip chromium-browser \
+    build-essential libcairo2-dev libpango1.0-dev libjpeg-dev \
+    libgif-dev librsvg2-dev
+
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install nodejs -y
 
-# 3. Clone repository and bypass git restrictions
-git clone https://github.com
+pip3 install yt-dlp
+
+git clone https://github.com/hanifssh/redskull.git
 cd redskull
-npm config set allow-git all
-npm config set ignore-scripts false
-
-# 4. Pre-approve lifecycle compilation hooks for modern npm packages
-npm install-scripts approve canvas sharp ffmpeg-static protobufjs novaxmd-baileys-v2 @whiskeysockets/baileys 2>/dev/null || true
-
-# 5. Build and launch
 npm install
 npx playwright install chromium
-npm start
-```
+node index.js</code></pre>
 
----
+<hr>
 
-### Arch Linux
-```bash
-# 1. System upgrade and base graphics engine prerequisites
-sudo pacman -Syu
-sudo pacman -S --needed base-devel cairo pango libjpeg-turbo giflib librsvg libvips git ffmpeg yt-dlp chromium
+<h2>Arch Linux</h2>
 
-# 2. Setup Fast Node Manager (FNM) to isolate the Node 20 runtime 
-# (This prevents bleeding-edge Arch system Node updates from breaking things)
+<pre><code>sudo pacman -Syu
+sudo pacman -S --needed base-devel cairo pango libjpeg-turbo giflib \
+    librsvg libvips git ffmpeg yt-dlp chromium
+
 sudo pacman -S fnm
-eval "\$(fnm env)"
+eval "$(fnm env)"
 fnm install 20
 fnm use 20
 
-# 3. Clone and unblock configuration constraints
-git clone https://github.com
+git clone https://github.com/hanifssh/redskull.git
 cd redskull
-npm config set allow-git all
-npm config set ignore-scripts false
-
-# 4. Pre-approve packages matching strict modern npm script-execution policies
-npm install-scripts approve canvas sharp ffmpeg-static protobufjs novaxmd-baileys-v2 @whiskeysockets/baileys 2>/dev/null || true
-
-# 5. Bypass global linking structures and build
-SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install
+npm install
 npx playwright install chromium
+node index.js</code></pre>
 
-# 6. Execute bot application
-npm start
-```
+<blockquote>
+  <p>If <code>sharp</code> fails on Arch due to its bleeding-edge system libraries, run:</p>
+  <pre><code>rm -rf node_modules/sharp node_modules/wa-sticker-formatter/node_modules/sharp
+SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install sharp@0.30.7 --ignore-scripts=false</code></pre>
+</blockquote>
 
----
+<hr>
 
-### Docker
-```bash
-git clone https://github.com
+<h2>Docker</h2>
+
+<pre><code>git clone https://github.com/hanifssh/redskull.git
 cd redskull
 docker build -t redskull .
-docker run -d --name redskull --restart unless-stopped redskull
-```
+docker run -d --name redskull --restart unless-stopped \
+    -v $(pwd)/sessions:/app/sessions \
+    -v $(pwd)/database:/app/database \
+    redskull</code></pre>
 
----
+<p>First-time pairing (interactive terminal required):</p>
 
-## Contributing
+<pre><code>docker run -it --rm \
+    -v $(pwd)/sessions:/app/sessions \
+    -v $(pwd)/database:/app/database \
+    redskull node index.js --pair --phone=YOUR_NUMBER</code></pre>
 
-Pull requests are welcome. For major changes, open an issue first to discuss what you'd like to change.
+<p>Or use the included compose file:</p>
 
----
+<pre><code>docker-compose up -d
+docker-compose logs -f</code></pre>
 
-## Disclaimer
+<hr>
 
-This bot is for educational purposes. Use responsibly. The developer is not responsible for any misuse or account bans.
+<h2>Contributing</h2>
 
----
+<p>Pull requests are welcome. For major changes, open an issue first to discuss what you'd like to change.</p>
 
-## License
+<hr>
 
-MIT
+<h2>Disclaimer</h2>
 
----
+<p>This bot is for educational purposes only. Use responsibly. The developer is not responsible for any misuse or account bans.</p>
+
+<hr>
+
+<h2>License</h2>
+
+<p><a href="LICENSE">MIT</a></p>
+
+<hr>
 
 <p align="center">
-  Made with 🤍 by <a href="https://github.com">Hanif</a>
+  Made with 🤍 by <a href="https://github.com/hanifssh">Hanif</a>
 </p>
