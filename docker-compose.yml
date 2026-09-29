@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  redskull:
+    build: .
+    container_name: redskull
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./sessions:/app/sessions
+      - ./database:/app/database
+      - ./temp:/app/temp
